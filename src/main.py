@@ -36,5 +36,5 @@ print(forces)
 print(np.shape(forces))
 
 # READ FINGER POSITION FILE -------------------------------------------------
-
+# dodata/extracted
 # crear transformers

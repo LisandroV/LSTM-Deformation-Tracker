@@ -1,19 +1,20 @@
 # READ FORCE FILE -------------------------------------------------
 import numpy as np
-import numpy.typing as npt
+
+# import numpy.typing as npt
+import nptyping as npt
 import os
 
-DATA_DIR = "data"
+DATA_DIR = "data/sponge_centre"
 
 
-def read_forces(forces_file: str) -> npt.NDArray[np.float64]:
+def read_finger_forces_file(forces_file: str) -> npt.NDArray[npt.Shape["*"], npt.Float]:
     """
-    Reads forces file and returns the relevant forces.
+    Reads the finger forces file and returns the Fz column.
     Arguments:
         forces_file: path of the forces file to read
     Returns:
-        float64 array of the forces in Fz.
-        [ 0.02, -0.02, ...]
+        np.float64 numpy ndarray of the forces in Fz.
     """
     forces = np.loadtxt(
         forces_file,
@@ -23,18 +24,32 @@ def read_forces(forces_file: str) -> npt.NDArray[np.float64]:
         },
     )
     # only_forces = forces[["fx", "fy", "fz", "tx", "ty", "tz"]]
-    only_forces = forces[["fz"]]
-    force_array = np.zeros(len(only_forces), dtype=np.float64)
-    for i, row in enumerate(only_forces):
-        force_array[i] = row
-    return force_array
+    return forces[["fz"][0]]
 
 
-force_file_path = os.path.join(DATA_DIR, "sponge_centre_100.txt")
-forces = read_forces(force_file_path)
+finger_force_file = os.path.join(DATA_DIR, "finger_force.txt")
+forces = read_finger_forces_file(finger_force_file)
 print(forces)
-print(np.shape(forces))
+
 
 # READ FINGER POSITION FILE -------------------------------------------------
-# dodata/extracted
+def read_finger_positions_file(
+    finger_position_file: str,
+) -> npt.NDArray[npt.Shape["*, [x,y]"], npt.Int]:
+    """
+    Reads the finger positions file and returns array of (x,y) coordinates.
+    Arguments:
+        finger_position_file: path of the forces file to read
+    Returns:
+        (np.float32, np.float32) numpy ndarray
+    """
+    return np.loadtxt(
+        finger_position_file, dtype={"names": ("cx", "cy"), "formats": ("f", "f")}
+    )
+
+
+finger_positions_file = os.path.join(DATA_DIR, "finger_position.txt")
+positions = read_finger_positions_file(finger_positions_file)
+print(positions)
+
 # crear transformers

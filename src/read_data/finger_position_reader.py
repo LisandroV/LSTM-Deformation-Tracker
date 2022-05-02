@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def read_finger_positions_file(finger_position_file: str):
+def read_finger_positions_file(file_path: str):
     """
     Reads the finger positions file and returns array of (x,y) coordinates.
     Arguments:
@@ -9,6 +9,4 @@ def read_finger_positions_file(finger_position_file: str):
     Returns:
         (np.float32, np.float32) numpy ndarray
     """
-    return np.loadtxt(
-        finger_position_file, dtype={"names": ("cx", "cy"), "formats": ("f", "f")}
-    )
+    return np.loadtxt(file_path, dtype={"names": ("cx", "cy"), "formats": ("f", "f")})

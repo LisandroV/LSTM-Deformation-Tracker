@@ -54,6 +54,7 @@ def convert_hist_to_csv(hist_file: str, csv_file: str):
             f.write(",".join(csv_row) + "\n")
     f.close()
 
+
 hist_file = "data/sponge_centre/control_points.hist"
 csv_file = "data/sponge_centre/control_points.csv"
 convert_hist_to_csv(hist_file, csv_file)

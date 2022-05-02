@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def read_finger_forces_file(forces_file: str):
+def read_finger_forces_file(file_path: str):
     """
     Reads the finger forces file and returns the Fz column.
     Arguments:
@@ -10,7 +10,7 @@ def read_finger_forces_file(forces_file: str):
         np.float64 numpy ndarray of the forces in Fz.
     """
     forces = np.loadtxt(
-        forces_file,
+        file_path,
         dtype={
             "names": ("time", "fx", "fy", "fz", "tx", "ty", "tz", "d"),
             "formats": ("f", "f", "f", "f", "f", "f", "f", "f"),

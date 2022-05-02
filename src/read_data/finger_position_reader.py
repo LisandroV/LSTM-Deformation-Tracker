@@ -9,4 +9,8 @@ def read_finger_positions_file(file_path: str):
     Returns:
         (np.float32, np.float32) numpy ndarray
     """
-    return np.loadtxt(file_path, dtype={"names": ("cx", "cy"), "formats": ("f", "f")})
+    return np.transpose(
+        np.loadtxt(
+            file_path, dtype={"names": ["cx", "cy"], "formats": ["f", "f"]}, unpack=True
+        )
+    )

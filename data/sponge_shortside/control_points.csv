@@ -1,4 +1,4 @@
-id,time_step,birth_time,death_time,x,y,next_id,prev_id
+id,time_step,birth_time,death_time,x,y,prev_id,next_id
 0,0,0,15,497,241,136,1
 0,1,0,15,498,240,136,1
 0,2,0,15,499,240,136,1

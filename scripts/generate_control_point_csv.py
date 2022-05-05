@@ -39,7 +39,7 @@ def convert_hist_to_csv(hist_file: str, csv_file: str):
 
     # create .csv
     f = open(csv_file, "w")
-    csv_header = "id,time_step,birth_time,death_time,x,y,next_id,prev_id\n"
+    csv_header = "id,time_step,birth_time,death_time,x,y,prev_id,next_id\n"
     f.write(csv_header)
     for hist_line in hist_lines:
         for time, control_point in enumerate(hist_line[3]):

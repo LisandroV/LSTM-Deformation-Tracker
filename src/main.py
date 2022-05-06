@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import time
 
 from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
@@ -33,39 +34,28 @@ control_points_df = read_control_points_file(control_points_file)
 
 # create transformers
 
-# continue: create slices
-# control_points_by_time = control_points_df.groupby(
-#     ["time_step"]
-# ).apply(
-#     lambda group: np.column_stack((
-#         np.array(group["x"]),
-#         np.array(group["y"]),
-#         np.array(group["id"])
-#     ))
-# )
-# print(control_points_by_time[0])
+control_points_df = control_points_df.set_index(['id', 'time_step']).sort_index()
 
-# 0 time_step      100
-# 1 birth_time     100
-# 2 death_time      -1
-# 3 x              553
-# 4 y              390
-# 5 next_id       1046
-# 6 prev_id       1076
-
-
-n_degree = 1
+n_degree = 10
+segments = [] # contains the neighbors for every point in time
 for key, row in control_points_df.iterrows():
-    print(row)
-    #prev = next = control_point = self.control_points[cp_ident].get_control_point(time)
-    #import pdb;pdb.set_trace();
-    segment = [np.array([row[3],row[4]])]
+    segment = [np.array([row[2],row[3]])]
+    prev_id = row[4]
+    next_id = row[5]
     for i in range(n_degree):
-        prev = control_points_df.loc[(control_points_df['id'] == row[6]) & (control_points_df['time_step'] == row[1])]
-        next = control_points_df.loc[(control_points_df['id'] == row[6]) & (control_points_df['time_step'] == row[1])]
-        print(prev)
-        # prev = self.control_points[prev.prev_neighbour_index].get_control_point(time)
-        # next = self.control_points[next.next_neighbour_index].get_control_point(time)
-        # segment.insert(0, prev)
-        # segment.append(next)
-    break
+        prev = control_points_df.loc[prev_id, key[1]]
+        next = control_points_df.loc[next_id, key[1]]
+        segment.insert(0, np.array(
+            [prev['x'], prev['y']]
+        ))
+        segment.append(np.array(
+            [next['x'], next['y']]
+        ))
+        prev_id = prev['prev_id']
+        next_id = next['next_id']
+    segments.append(np.array(segment))
+    print(str(key) + " segment... " + time.ctime())
+
+segments = np.array(segments)
+print(segments)
+print(np.shape(segments))

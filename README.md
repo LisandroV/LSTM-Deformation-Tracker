@@ -9,3 +9,8 @@ To fix the code format according to the PEP8 standard:
 ```
 black .
 ```
+
+my resources:
+
+To create a tf Dataset:
+https://medium.com/when-i-work-data/converting-a-pandas-dataframe-into-a-tensorflow-dataset-752f3783c168

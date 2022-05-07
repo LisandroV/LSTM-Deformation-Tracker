@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def read_finger_positions_file(file_path: str):
+def read_finger_positions_file(file_path: str) -> np.ndarray:
     """
     Reads the finger positions file and returns array of (x,y) coordinates.
     Arguments:

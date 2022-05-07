@@ -9,20 +9,20 @@ import matplotlib.cm as cm
 from read_data.control_point_reader import ControlPointHistory, ContourHistory
 
 
-def plot_control_point_history(history: ContourHistory):
+def plot_control_point_history(history: ContourHistory) -> None:
     """Plots the trajectories of the control points through time."""
     fig = plt.figure("Control points' history")
     fig.suptitle("Control points' history")
     ax = fig.add_subplot(111, projection="3d")
 
-    NCURVES = len(history.control_points)
+    NCURVES = len(history.cp_histories)
     values = range(NCURVES)
     jet = plt.get_cmap("jet")
     cNorm = colors.Normalize(vmin=0, vmax=values[-1])
     scalarMap = cm.ScalarMappable(norm=cNorm, cmap=jet)
 
     # plots every control point history separately
-    for i, cp_history in enumerate(history.control_points[0:NCURVES]):
+    for i, cp_history in enumerate(history.cp_histories[0:NCURVES]):
         end_t = (
             cp_history.death_time
             if cp_history.death_time != ControlPointHistory.UNDEAD
@@ -42,7 +42,7 @@ def plot_control_point_history(history: ContourHistory):
     plt.show()
 
 
-def plot_finger_position(finger_position_data):
+def plot_finger_position(finger_position_data: np.ndarray) -> None:
     """Plots the finger position through time."""
     fig = plt.figure("Finger position (y axis)")
     fig.suptitle("Finger position in time")
@@ -57,7 +57,7 @@ def plot_finger_position(finger_position_data):
     plt.show()
 
 
-def plot_finger_force(finger_force_data):
+def plot_finger_force(finger_force_data) -> None:
     """Plots the finger force through time."""
     fig = plt.figure("Finger force")
     fig.suptitle("Finger force in time")

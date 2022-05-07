@@ -5,7 +5,7 @@ from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
 from read_data.control_point_reader import read_control_points_file
 
-import plots.data_plotter as plotter
+import plots.dataset_plotter as plotter
 
 DATA_DIR = "data/sponge_centre"
 
@@ -26,7 +26,6 @@ control_points_df = read_control_points_file(control_points_file)
 
 
 # PLOT DATA ----------------------------------------------------------------
-#plotter.plot_control_point_history(control_points_df)
-#plotter.plot_finger_position(positions)
-#plotter.plot_finger_force(forces)
-
+# plotter.plot_control_point_history(control_points_df)
+# plotter.plot_finger_position(positions)
+# plotter.plot_finger_force(forces)

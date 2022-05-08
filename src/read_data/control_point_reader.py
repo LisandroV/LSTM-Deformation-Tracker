@@ -5,7 +5,9 @@ import numpy as np
 class ControlPoint:
     """Coordinates and neighbours of a control point within the history at a certain time."""
 
-    def __init__(self, x: int, y: int, prev_neighbour_index: int, next_neighbour_index: int):
+    def __init__(
+        self, x: int, y: int, prev_neighbour_index: int, next_neighbour_index: int
+    ):
         self.x: int = x
         self.y: int = y
         self.prev_neighbour_index: int = prev_neighbour_index
@@ -24,7 +26,9 @@ class ControlPointHistory:
 
     UNDEAD = -1
 
-    def __init__(self, ident: int, birth_time: int, death_time: int, history: list[ControlPoint]):
+    def __init__(
+        self, ident: int, birth_time: int, death_time: int, history: list[ControlPoint]
+    ):
         """
         Creates a register with the coordinates of the control point at each time step beginning at birth_time.
         :param ident:       int
@@ -129,7 +133,9 @@ class ContourHistory:
             for line in hist_file:
                 self.cp_histories.append(parse_control_point_history(line))
 
-    def get_contour_segment(self, cp_ident: int, n_degree: int, time: int) -> list[ControlPoint]:
+    def get_contour_segment(
+        self, cp_ident: int, n_degree: int, time: int
+    ) -> list[ControlPoint]:
         """
         Returns a list with the control point at cp_ident in the center, n_degree previous neighbours to its left and
         n_degree next neighbours to its right at the indicated time.
@@ -143,12 +149,8 @@ class ContourHistory:
         )
         segment: list[ControlPoint] = [control_point]
         for i in range(n_degree):
-            prev = self.cp_histories[prev.prev_neighbour_index].get_control_point(
-                time
-            )
-            next = self.cp_histories[next.next_neighbour_index].get_control_point(
-                time
-            )
+            prev = self.cp_histories[prev.prev_neighbour_index].get_control_point(time)
+            next = self.cp_histories[next.next_neighbour_index].get_control_point(time)
             segment.insert(0, prev)
             segment.append(next)
         return segment

@@ -1,48 +1,55 @@
 import numpy as np
+import functools
 
 from read_data.control_point_reader import ContourHistory, ControlPoint
 
-def create_dataset(history: ContourHistory, time_degree: int, neighbour_degree: int) -> tuple[np.ndarray, np.ndarray]:
+
+def create_dataset(
+    history: ContourHistory,
+    finger_force_data: np.ndarray,
+    finger_position_data: np.ndarray,
+    time_degree: int,#number of segments in the past (considering the current), it consider 0 as a natural
+    neighbour_degree: int,
+) -> tuple[np.ndarray, np.ndarray]:
     """Fills supervised data matrices X and Y."""
-    num_time_steps = time_degree + 2
+    dimension = 2
+    segment_size = (neighbour_degree * 2 + 1) * dimension
     t_plus_one = time_degree + 1
 
-    data_x = []
-    data_y = []
+    data_X = []
+    data_Y = []
 
     for cp_history in history.cp_histories:
-        if (
-            len(cp_history.history) >= num_time_steps
+        if (# be careful with this condition, if an error happens, add one more
+            len(cp_history.history) >= t_plus_one
         ):  # need control points with enough history according to T
             start_cp = cp_history.birth_time + t_plus_one
-            for t_p_1, current_cp in enumerate(
+            for current_time, current_cp in enumerate(
                 cp_history.history[t_plus_one:], start_cp
-            ):  # ASK: why those cp before t_plus_one are not considered?
-                # x = np.zeros(n_characteristics, dtype=np.float64)
-                # y = np.zeros(n_output, dtype=np.float64)
-
-                # ADD FINGER FORCES
-
-                # y[:] = (control_point.x, control_point.y)    # position at t + 1
-
-                # ADD FINGER POSITIONS
-
-                dimension = 2
-                pos_size = (neighbour_degree * 2 + 1) * dimension
-                t = t_p_1 - 1
-                time_segments = []
-                for delta_t in range(0, t_plus_one):  # goes back in time
+            ):
+                t = current_time - 1
+                time_segments = np.array([])
+                for delta_t in range(0, time_degree):# Goes back in time to get the segments before the current control point
                     segment: list[ControlPoint] = history.get_contour_segment(
                         cp_history.ident, neighbour_degree, t - delta_t
                     )
-
-                    pos_row = np.zeros(pos_size, dtype=np.float64)
+                    flat_segment = np.zeros(segment_size, dtype=np.float64)
                     for j, cp in enumerate(segment):
-                        pos_row[j * 2] = cp.x
-                        pos_row[j * 2 + 1] = cp.y
-                    time_segments.append(pos_row)
-                data_x.append(np.array(time_segments))
+                        flat_segment[j * 2] = cp.x
+                        flat_segment[j * 2 + 1] = cp.y
 
-                data_y.append(np.array([current_cp.x, current_cp.y]))
+                    time_segments = np.append(time_segments, flat_segment)
 
-    return np.array(data_x), np.array(data_y)
+                x = functools.reduce(
+                    lambda x, y: np.append(x, y),
+                    [
+                        np.array([finger_force_data[current_time - 1] * 100]),
+                        finger_position_data[current_time - 1],
+                        time_segments,
+                    ],
+                )
+                data_X.append(x)
+
+                data_Y.append(np.array([current_cp.x, current_cp.y]))
+
+    return np.array(data_X), np.array(data_Y)

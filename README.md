@@ -17,3 +17,10 @@ https://medium.com/when-i-work-data/converting-a-pandas-dataframe-into-a-tensorf
 
 mypy type cheat sheet:
 https://mypy.readthedocs.io/en/stable/cheat_sheet_py3.html
+
+
+
+To investigate:
+
+Furier Descriptors: https://arxiv.org/abs/1806.03857
+paper: https://arxiv.org/pdf/1806.03857.pdf

@@ -1,6 +1,7 @@
 import os
 import numpy as np
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # to supress tf warnings
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # to supress tf warnings
 from tensorflow import keras
 
 from read_data.control_point_reader import ContourHistory
@@ -51,12 +52,18 @@ model = keras.models.Model(inputs=[input_], outputs=[output])
 
 print(model.summary())
 
-model.compile(loss="mean_squared_error", optimizer=keras.optimizers.SGD(learning_rate=1e-2))
+model.compile(
+    loss="mean_squared_error", optimizer=keras.optimizers.SGD(learning_rate=1e-2)
+)
 
 # TRAIN----------------------------------------------------------------
 print("TRAINING ------ ")
-history = model.fit(X_train, Y_train, epochs=100,)
-                    #validation_data=(X_valid, y_valid))
+history = model.fit(
+    X_train,
+    Y_train,
+    epochs=100,
+)
+# validation_data=(X_valid, y_valid))
 
 print("ERROR")
 mse_test = model.evaluate(X_train, Y_train)

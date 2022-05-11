@@ -8,7 +8,7 @@ def create_dataset(
     history: ContourHistory,
     finger_force_data: np.ndarray,
     finger_position_data: np.ndarray,
-    time_degree: int,#number of segments in the past (considering the current), it consider 0 as a natural
+    time_degree: int,  # number of segments in the past (considering the current), it consider 0 as a natural
     neighbour_degree: int,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Fills supervised data matrices X and Y."""
@@ -20,7 +20,7 @@ def create_dataset(
     data_Y = []
 
     for cp_history in history.cp_histories:
-        if (# be careful with this condition, if an error happens, add one more
+        if (  # be careful with this condition, if an error happens, add one more
             len(cp_history.history) >= t_plus_one
         ):  # need control points with enough history according to T
             start_cp = cp_history.birth_time + t_plus_one
@@ -29,7 +29,9 @@ def create_dataset(
             ):
                 t = current_time - 1
                 time_segments = np.array([])
-                for delta_t in range(0, time_degree):# Goes back in time to get the segments before the current control point
+                for delta_t in range(
+                    0, time_degree
+                ):  # Goes back in time to get the segments before the current control point
                     segment: list[ControlPoint] = history.get_contour_segment(
                         cp_history.ident, neighbour_degree, t - delta_t
                     )

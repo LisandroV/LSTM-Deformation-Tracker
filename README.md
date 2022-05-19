@@ -10,6 +10,14 @@ To fix the code format according to the PEP8 standard:
 black .
 ```
 
+## Visualize training loss
+Tensorboard is used to visualize the training loss.
+
+Run this command to run tensorboard:
+```
+tensorboard --logdir=./logs --port=6006
+```
+
 My resources:
 
 To create a tf Dataset:

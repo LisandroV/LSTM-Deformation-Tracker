@@ -22,7 +22,7 @@ forces: np.ndarray = read_finger_forces_file(finger_force_file)
 
 # READ FINGER POSITION FILE ----------------------------------------------------
 finger_positions_file: str = os.path.join(DATA_DIR, "finger_position.txt")
-positions: np.ndarray = read_finger_positions_file(finger_positions_file)
+finger_positions: np.ndarray = read_finger_positions_file(finger_positions_file)
 
 
 # READ CONTROL POINTS ----------------------------------------------------------
@@ -37,7 +37,7 @@ history: ContourHistory = ContourHistory(control_points_file)
 
 
 # CREATE DATASET ---------------------------------------------------------------
-X_train, Y_train = create_dataset(history, forces, positions, 2, 10)
+X_train, Y_train = create_dataset(history, forces, finger_positions, 2, 10)
 print(np.shape(X_train))
 print(X_train[0])
 print(np.shape(Y_train))
@@ -60,11 +60,9 @@ model.compile(
 # SETUP TENSORBOARD LOGS -------------------------------------------------------
 def get_log_filename(model_name: str):
     import time
-
     logdir = os.path.join(os.curdir, "logs")
     log_name = time.strftime(f"{model_name}_%Y_%m_%d-%H_%M_%S")
     return os.path.join(logdir, log_name)
-
 
 log_name = get_log_filename("basic")
 tensorboard_cb = keras.callbacks.TensorBoard(log_name)

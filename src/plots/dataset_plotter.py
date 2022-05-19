@@ -70,3 +70,25 @@ def plot_finger_force(finger_force_data) -> None:
     ax.set_xlabel("time (steps)")
     ax.set_ylabel("force")
     plt.show()
+
+def plot_npz_control_points(control_points):
+    """ Plots the trajectories of the control points through time. """
+    fig = plt.figure("Control points' history")
+    fig.suptitle("Control points' history")
+    ax = fig.add_subplot(111, projection='3d')
+
+    NCURVES = control_points.shape[1] // 2
+    values = range(NCURVES)
+    jet = plt.get_cmap('jet')
+    cNorm = colors.Normalize(vmin=0, vmax=values[-1])
+    scalarMap = cm.ScalarMappable(norm=cNorm, cmap=jet)
+
+    t = np.arange(0, control_points.shape[0])
+    for i in values:
+        colorVal = scalarMap.to_rgba(values[i])
+        ax.plot(t, control_points[:,2*i], control_points[:,2*i+1], color=colorVal)
+
+    ax.set_xlabel('time (steps)')
+    ax.set_ylabel('x (pixels)')
+    ax.set_zlabel('y (pixels)')
+    plt.show()

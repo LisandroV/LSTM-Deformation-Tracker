@@ -10,7 +10,7 @@ To fix the code format according to the PEP8 standard:
 black .
 ```
 
-## Visualize training loss
+## Visualize training loss with Tensorboard
 Tensorboard is used to visualize the training loss.
 
 Run this command to run tensorboard:

@@ -24,7 +24,7 @@ def get_scale(polygons):
     print(f"Normalization Params:[\n\tmax_coord_val:{np.max(min_maxs)}\n\tmin_coord_val:{np.min(min_maxs)}\n\tstd:{std}\n]")
     return std
 
-def get_normalized_polygons(polygons):
+def normalize_polygons(polygons):
     transformed_polygons = np.copy(polygons)
     means = get_polygons_centers(transformed_polygons)
     scale = get_scale(transformed_polygons)

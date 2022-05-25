@@ -71,8 +71,7 @@ def plot_finger_force(finger_force_data) -> None:
     ax.set_ylabel("force")
     plt.show()
 
-def plot_npz_control_points(control_points)->None:
-    # control_points = get_normalized_polygons(control_points)
+def plot_npz_control_points(control_points, extraplot_cb = None)->None:
     """Plots the trajectories of the control points through time."""
     fig = plt.figure("Control points' history")
     fig.suptitle("Control points' history")
@@ -90,11 +89,10 @@ def plot_npz_control_points(control_points)->None:
         colorVal = scalarMap.to_rgba(values[i])
         ax.plot(t, control_points[:,i,0], control_points[:,i,1], color=colorVal)
 
+    if(extraplot_cb is not None):
+        extraplot_cb(ax)
+
     ax.set_xlabel("time (steps)")
     ax.set_ylabel("x (pixels)")
     ax.set_zlabel("y (pixels)")
     plt.show()
-
-    # centers = get_polygons_centers(control_points)
-    # ax.plot(t, centers[:,0], centers[:,1])
-    # plt.show()

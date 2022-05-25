@@ -24,27 +24,33 @@ forces: np.ndarray = read_finger_forces_file(finger_force_file)
 # READ FINGER POSITION FILE ----------------------------------------------------
 control_points_file: str = os.path.join(DATA_DIR, "fixed_control_points.npz")
 npzfile = np.load(control_points_file)
-finger_positions = npzfile['X']    # Finger positions are in X
-# print(np.shape(finger_positions))
-# print(finger_positions[0])
+finger_positions = npzfile['X'] # Finger positions are in X
 
 
 # READ CONTROL POINTS ----------------------------------------------------------
 control_points_file: str = os.path.join(DATA_DIR, "fixed_control_points.npz")
 npzfile = np.load(control_points_file)
-flat_control_points = npzfile['Y']    # Finger positions are in X
+flat_control_points = npzfile['Y'] # Finger positions are in X
 polygons = np.reshape(flat_control_points, (np.shape(flat_control_points)[0],-1, 2))
 
-# NORMALIZATION
-norm_polygons = normalization.get_normalized_polygons(polygons)
 
+# NORMALIZATION
+norm_polygons = normalization.normalize_polygons(polygons)
+polygons_means = normalization.get_polygons_centers(polygons)
 
 
 # PLOT DATA --------------------------------------------------------------------
-plotter.plot_npz_control_points(polygons)
-plotter.plot_npz_control_points(norm_polygons)
+time_steps = polygons.shape[0]
+
+mean_plot = lambda ax: ax.plot(range(time_steps),polygons_means[:,0],polygons_means[:,1])
+plotter.plot_npz_control_points(polygons, mean_plot)
+
+xy_axis_plot = lambda ax: ax.plot(range(time_steps),[0]*time_steps,[0]*time_steps)
+plotter.plot_npz_control_points(norm_polygons, xy_axis_plot)
+
 plotter.plot_finger_position(finger_positions)
-# plotter.plot_finger_force(forces)
+
+plotter.plot_finger_force(forces)
 
 
 # # CREATE DATASET ---------------------------------------------------------------

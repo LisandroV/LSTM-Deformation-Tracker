@@ -24,13 +24,29 @@ def get_scale(polygons):
     print(f"Normalization Params:[\n\tmax_coord_val:{np.max(min_maxs)}\n\tmin_coord_val:{np.min(min_maxs)}\n\tstd:{std}\n]")
     return std
 
+# VERSION: 1
+# substracts the center of every polygon respectively
+# def normalize_polygons(polygons):
+#     transformed_polygons = np.copy(polygons)
+#     means = get_polygons_centers(transformed_polygons)
+#     scale = get_scale(transformed_polygons)
+
+#     for index, polygon in enumerate(transformed_polygons):
+#         polygon[..., :2] -= means[index]
+#         polygon[..., :2] /= scale
+
+#     return transformed_polygons
+
+# VERSION: 2
+# substracts only the center of the first polygon
+# this is the best version
 def normalize_polygons(polygons):
     transformed_polygons = np.copy(polygons)
     means = get_polygons_centers(transformed_polygons)
     scale = get_scale(transformed_polygons)
 
-    for index, polygon in enumerate(transformed_polygons):
-        polygon[..., :2] -= means[index]
+    for polygon in transformed_polygons:
+        polygon[..., :2] -= means[0]
         polygon[..., :2] /= scale
 
     return transformed_polygons

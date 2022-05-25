@@ -21,19 +21,27 @@ forces: np.ndarray = read_finger_forces_file(finger_force_file)
 
 
 # READ FINGER POSITION FILE ----------------------------------------------------
-control_points_file: str = os.path.join(DATA_DIR, "inmortal_control_points.npz")
+control_points_file: str = os.path.join(DATA_DIR, "fixed_control_points.npz")
 npzfile = np.load(control_points_file)
 finger_positions = npzfile['X']    # Finger positions are in X
-print(np.shape(finger_positions))
-print(finger_positions[0])
+# print(np.shape(finger_positions))
+# print(finger_positions[0])
 
 
 # READ CONTROL POINTS ----------------------------------------------------------
-control_points_file: str = os.path.join(DATA_DIR, "inmortal_control_points.npz")
+control_points_file: str = os.path.join(DATA_DIR, "fixed_control_points.npz")
 npzfile = np.load(control_points_file)
-control_points = npzfile['Y']    # Finger positions are in X
-print(np.shape(control_points))
-print(control_points[0])
+flat_control_points = npzfile['Y']    # Finger positions are in X
+control_points = np.reshape(flat_control_points, (np.shape(flat_control_points)[0],-1, 2))
+
+# NORMALIZATION
+center =  np.mean(flat_control_points, 0, dtype=np.float64)
+geom_mean = np.mean(control_points[0][:, 0:2], axis=0, keepdims=True)
+print(geom_mean)
+# # scale = np.std(self.X, 0, dtype=np.float64) * 2
+# scale = [np.std(self.X[:,0])] + [500] * (self.X.shape[1] - 1)
+# # print('Normalization constants = ', center, scale)
+# scale = np.array(scale, dtype=np.float64)
 
 
 

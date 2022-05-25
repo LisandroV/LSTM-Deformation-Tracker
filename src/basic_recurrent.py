@@ -9,6 +9,7 @@ from read_data.dataset_creator import create_dataset
 from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
 
+import utils.normalization as normalization
 import plots.dataset_plotter as plotter
 
 DATA_DIR: str = "data/sponge_centre"
@@ -32,21 +33,16 @@ finger_positions = npzfile['X']    # Finger positions are in X
 control_points_file: str = os.path.join(DATA_DIR, "fixed_control_points.npz")
 npzfile = np.load(control_points_file)
 flat_control_points = npzfile['Y']    # Finger positions are in X
-control_points = np.reshape(flat_control_points, (np.shape(flat_control_points)[0],-1, 2))
+polygons = np.reshape(flat_control_points, (np.shape(flat_control_points)[0],-1, 2))
 
 # NORMALIZATION
-center =  np.mean(flat_control_points, 0, dtype=np.float64)
-geom_mean = np.mean(control_points[0][:, 0:2], axis=0, keepdims=True)
-print(geom_mean)
-# # scale = np.std(self.X, 0, dtype=np.float64) * 2
-# scale = [np.std(self.X[:,0])] + [500] * (self.X.shape[1] - 1)
-# # print('Normalization constants = ', center, scale)
-# scale = np.array(scale, dtype=np.float64)
+norm_polygons = normalization.get_normalized_polygons(polygons)
 
 
 
 # PLOT DATA --------------------------------------------------------------------
-plotter.plot_npz_control_points(control_points)
+plotter.plot_npz_control_points(polygons)
+plotter.plot_npz_control_points(norm_polygons)
 plotter.plot_finger_position(finger_positions)
 # plotter.plot_finger_force(forces)
 

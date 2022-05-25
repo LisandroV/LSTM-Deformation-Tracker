@@ -20,7 +20,7 @@ def get_scale(polygons):
             np.min(centred_polygon),
             np.max(centred_polygon)
         ])
-    std = np.std(min_maxs)
+    std = np.max(min_maxs)# VERSION 3: use np.max instead of np.std
     print(f"Normalization Params:[\n\tmax_coord_val:{np.max(min_maxs)}\n\tmin_coord_val:{np.min(min_maxs)}\n\tstd:{std}\n]")
     return std
 

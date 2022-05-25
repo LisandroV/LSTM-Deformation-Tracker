@@ -1,16 +1,18 @@
 import os
 import numpy as np
 
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # to supress tf warnings
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"# to supress tf warnings
+import tensorflow as tf
 from tensorflow import keras
 
-from read_data.control_point_reader import ContourHistory
-from read_data.dataset_creator import create_dataset
 from read_data.finger_force_reader import read_finger_forces_file
-from read_data.finger_position_reader import read_finger_positions_file
 
 import utils.normalization as normalization
+import utils.logs as util_logs
 import plots.dataset_plotter as plotter
+
+np.random.seed(42)
+tf.random.set_seed(42)
 
 DATA_DIR: str = "data/sponge_centre"
 MODEL_NAME: str = "basic_recurrent"
@@ -43,64 +45,90 @@ polygons_means = normalization.get_polygons_centers(polygons)
 time_steps = polygons.shape[0]
 
 mean_plot = lambda ax: ax.plot(range(time_steps),polygons_means[:,0],polygons_means[:,1])
-plotter.plot_npz_control_points(polygons, mean_plot)
+plotter.plot_npz_control_points(
+    polygons,
+    title="Control Points from NPZ file",
+    plot_cb=mean_plot
+)
 
-xy_axis_plot = lambda ax: ax.plot(range(time_steps),[0]*time_steps,[0]*time_steps)
-plotter.plot_npz_control_points(norm_polygons, xy_axis_plot)
+origin_axis_plot = lambda ax: ax.plot(range(time_steps),[0]*time_steps,[0]*time_steps)
+plotter.plot_npz_control_points(
+    norm_polygons,
+    title="Normalized Data",
+    plot_cb=origin_axis_plot
+)
 
 plotter.plot_finger_position(finger_positions)
 
 plotter.plot_finger_force(forces)
 
 
-# # CREATE DATASET ---------------------------------------------------------------
-# X_train, Y_train = create_dataset(history, forces, positions, 2, 10)
-# print(np.shape(X_train))
-# print(X_train[0])
-# print(np.shape(Y_train))
-# print(Y_train[0])
-
-# # CREATE MODEL -----------------------------------------------------------------
-# input_ = keras.layers.Input(shape=X_train.shape[1:])
-# norm = keras.layers.LayerNormalization(axis=1)(input_)
-# hidden1 = keras.layers.Dense(30, activation="tanh")(norm)
-# hidden2 = keras.layers.Dense(30, activation="tanh")(hidden1)
-# output = keras.layers.Dense(2)(hidden2)
-# model = keras.models.Model(inputs=[input_], outputs=[output])
-
-# print(model.summary())
-
-# model.compile(
-#     loss="mean_squared_error", optimizer=keras.optimizers.SGD(learning_rate=1e-2)
-# )
-
-# # SETUP TENSORBOARD LOGS -------------------------------------------------------
-# def get_log_filename(model_name: str):
-#     import time
-
-#     logdir = os.path.join(os.curdir, "logs")
-#     log_name = time.strftime(f"{model_name}_%Y_%m_%d-%H_%M_%S")
-#     return os.path.join(logdir, log_name)
+# CREATE DATASET ---------------------------------------------------------------
+X_train = np.reshape(norm_polygons,(norm_polygons.shape[0],-1))
+y_train = np.zeros((100,94))
+for index, row in enumerate(X_train):
+    y_train[index,:-2] = X_train[index,2:]
+    y_train[index,-2:] = X_train[index,:2]
 
 
-# log_name = get_log_filename("basic")
-# tensorboard_cb = keras.callbacks.TensorBoard(log_name)
+# CREATE RECURRENT MODEL -------------------------------------------------------
+model = keras.models.Sequential([
+    keras.layers.SimpleRNN(1, return_sequences=True, input_shape=[94, 1]),
+    #keras.layers.SimpleRNN(1, return_sequences=True, input_shape=[94, 1]), # deep recurent neural network
+])
+
+print(model.summary())
+
+model.compile(loss="mse", optimizer="adam")
 
 
-# # TRAIN ------------------------------------------------------------------------
-# print("TRAINING ------ ")
-# history = model.fit(
-#     X_train,
-#     Y_train,
-#     epochs=30,
-#     callbacks=[tensorboard_cb],
-# )
-# # validation_data=(X_valid, y_valid))
+# SETUP TENSORBOARD LOGS -------------------------------------------------------
+log_name = util_logs.get_log_filename(MODEL_NAME)
+tensorboard_cb = keras.callbacks.TensorBoard(log_name)
 
-# print("ERROR")
-# mse_test = model.evaluate(X_train, Y_train)
-# print(mse_test)
 
-# print("PREDICT ------ ")
-# y_pred = model.predict([X_train[:]])
-# print(y_pred)
+# EARLY STOPPING
+early_stopping_cb = keras.callbacks.EarlyStopping(patience=20,min_delta=0.0001)
+
+
+# TRAIN ------------------------------------------------------------------------
+history = model.fit(
+    X_train,
+    y_train,
+    validation_data=(X_train,y_train),#must be a different validation set, needed for early stopping
+    epochs=1000,
+    callbacks=[early_stopping_cb, tensorboard_cb],
+)
+
+mse_test = model.evaluate(X_train, y_train)
+print(f"FINAL ERROR: {mse_test}")
+
+
+# MULTIPLE-STEP PREDICTION
+to_predict = X_train[0:1]
+predictions = []
+for time_step in range(time_steps):
+    y_pred = model.predict(to_predict)
+    predictions.append(np.reshape(y_pred,-1))
+    to_predict = np.reshape(y_pred,(1,94))
+flat_predictions = np.array(predictions)
+predicted_polygons = np.reshape(flat_predictions, (np.shape(flat_predictions)[0],-1, 2))
+plotter.plot_npz_control_points(
+    predicted_polygons,
+    title="Multiple-Step Prediction",
+    plot_cb=origin_axis_plot
+)
+
+
+# ONE-STEP PREDICTION
+predictions = []
+for to_predict in X_train:
+    y_pred = model.predict(np.reshape(to_predict,(1,94)))
+    predictions.append(np.reshape(y_pred,-1))
+flat_predictions = np.array(predictions)
+predicted_polygons = np.reshape(flat_predictions, (np.shape(flat_predictions)[0],-1, 2))
+plotter.plot_npz_control_points(
+    predicted_polygons,
+    title="One-Step Prediction",
+    plot_cb=origin_axis_plot
+)

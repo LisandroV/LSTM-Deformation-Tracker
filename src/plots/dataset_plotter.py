@@ -7,8 +7,24 @@ import matplotlib.colors as colors
 import matplotlib.cm as cm
 
 from read_data.control_point_reader import ControlPointHistory, ContourHistory
+from utils.script_arguments import get_script_args
 
 
+def plot_flag_decorator(func):
+    """
+    Supress plotting when --no-plot flag is passed in
+    """
+
+    def aux_fun(*args, **kwargs):
+        script_args = get_script_args()
+        PLOT_GRAPHS: bool = script_args.plot
+        if PLOT_GRAPHS:
+            func(*args, **kwargs)
+
+    return aux_fun
+
+
+@plot_flag_decorator
 def plot_control_point_history(history: ContourHistory) -> None:
     """Plots the trajectories of the control points through time."""
     fig = plt.figure("Control points' history")
@@ -42,6 +58,7 @@ def plot_control_point_history(history: ContourHistory) -> None:
     plt.show()
 
 
+@plot_flag_decorator
 def plot_finger_position(finger_position_data: np.ndarray) -> None:
     """Plots the finger position through time."""
     fig = plt.figure("Finger position (y axis)")
@@ -57,6 +74,7 @@ def plot_finger_position(finger_position_data: np.ndarray) -> None:
     plt.show()
 
 
+@plot_flag_decorator
 def plot_finger_force(finger_force_data) -> None:
     """Plots the finger force through time."""
     fig = plt.figure("Finger force")
@@ -71,7 +89,11 @@ def plot_finger_force(finger_force_data) -> None:
     ax.set_ylabel("force")
     plt.show()
 
-def plot_npz_control_points(control_points, title='Control points history', plot_cb=None)->None:
+
+@plot_flag_decorator
+def plot_npz_control_points(
+    control_points, title="Control points history", plot_cb=None
+) -> None:
     """Plots the trajectories of the control points through time."""
     fig = plt.figure(title)
     fig.suptitle(title)
@@ -87,9 +109,9 @@ def plot_npz_control_points(control_points, title='Control points history', plot
     t = np.arange(0, np.shape(control_points)[0])
     for i in values:
         colorVal = scalarMap.to_rgba(values[i])
-        ax.plot(t, control_points[:,i,0], control_points[:,i,1], color=colorVal)
+        ax.plot(t, control_points[:, i, 0], control_points[:, i, 1], color=colorVal)
 
-    if(plot_cb is not None):
+    if plot_cb is not None:
         plot_cb(ax)
 
     ax.set_xlabel("time (steps)")

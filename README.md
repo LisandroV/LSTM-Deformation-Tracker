@@ -18,6 +18,17 @@ Run this command to run tensorboard:
 tensorboard --logdir=./logs --port=6006
 ```
 
+## Run the scripts
+Run script with the default options
+```
+python src/basic_recurrent.py
+```
+
+See all the posible options you can execute the script with
+```
+python src/basic_recurrent.py --help
+```
+
 My resources:
 
 To create a tf Dataset:

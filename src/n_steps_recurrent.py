@@ -1,5 +1,5 @@
 """
-In this file a basic recurrent neural network is trained with the npz data.
+In this file a recurrent neural network is trained with the npz data to predict n steps ahead at a time.
 """
 
 import os
@@ -24,7 +24,7 @@ tf.random.set_seed(42)
 script_args = get_script_args()
 
 DATA_DIR: str = "data/sponge_centre"
-MODEL_NAME: str = "basic_recurrent"
+MODEL_NAME: str = "n_teps_recurrent"
 SAVED_MODEL_FILE = f"saved_models/best_{MODEL_NAME}_model.h5"
 TRAIN_MODEL: bool = script_args.train
 

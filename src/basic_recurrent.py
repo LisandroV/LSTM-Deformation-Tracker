@@ -81,11 +81,14 @@ for index, row in enumerate(X_train):
     y_train[index, :-2] = X_train[index, 2:]
     y_train[index, -2:] = X_train[index, :2]
 
+# We wrap it since there is only one data sample, there would be more if there were more videos.
+X_train = np.array([X_train])
+y_train = np.array([y_train])
 
 # CREATE RECURRENT MODEL -------------------------------------------------------
 model = keras.models.Sequential(
     [
-        keras.layers.SimpleRNN(1, return_sequences=True, input_shape=[94, 1]),
+        keras.layers.SimpleRNN(94, return_sequences=True, input_shape=[None, 94]),
         # keras.layers.SimpleRNN(1, return_sequences=True, input_shape=[94, 1]), # deep recurent neural network
     ]
 )
@@ -131,30 +134,23 @@ else:
 # PREDICTION -------------------------------------------------------------------
 
 # MULTIPLE-STEP PREDICTION
-to_predict = X_train[0:1]
+to_predict = X_train[:,:1,:]
 predictions = []
-for time_step in range(time_steps):
+for step in range(time_steps):
     y_pred = model.predict(to_predict)
-    predictions.append(np.reshape(y_pred, -1))
-    to_predict = np.reshape(y_pred, (1, 94))
-flat_predictions = np.array(predictions)
-predicted_polygons = np.reshape(
-    flat_predictions, (np.shape(flat_predictions)[0], -1, 2)
-)
-plotter.plot_npz_control_points(
-    predicted_polygons, title="Multiple-Step Prediction", plot_cb=origin_axis_plot
-)
+    to_predict = y_pred
+    predictions.append(np.reshape(y_pred,-1))
+predicted_polygons = np.reshape(np.array(predictions), (100, 47, 2))
 
+plotter.plot_npz_control_points(
+    predicted_polygons[1:], title="Multiple-Step Prediction", plot_cb=origin_axis_plot
+)
 
 # ONE-STEP PREDICTION
-predictions = []
-for to_predict in X_train:
-    y_pred = model.predict(np.reshape(to_predict, (1, 94)))
-    predictions.append(np.reshape(y_pred, -1))
-flat_predictions = np.array(predictions)
-predicted_polygons = np.reshape(
-    flat_predictions, (np.shape(flat_predictions)[0], -1, 2)
-)
+y_pred = model.predict(X_train)
+predicted_polygons = np.reshape(y_pred, (100, 47, 2))
+
 plotter.plot_npz_control_points(
-    predicted_polygons, title="One-Step Prediction", plot_cb=origin_axis_plot
+    predicted_polygons[1:], title="One-Step Prediction", plot_cb=origin_axis_plot
 )
+

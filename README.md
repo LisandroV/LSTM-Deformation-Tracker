@@ -47,7 +47,7 @@ Furier Descriptors: https://arxiv.org/abs/1806.03857
 paper: https://arxiv.org/pdf/1806.03857.pdf
 
 GNGN guideline:
-http://neupy.com/apidocs/neupy.algorithms.competitive.growing_neural_gas.html
-https://github.com/itdxer/neupy/blob/master/notebooks/growing-neural-gas/Growing%20Neural%20Gas%20animated.ipynb
-https://github.com/itdxer/neupy/blob/master/neupy/algorithms/competitive/growing_neural_gas.py
-https://github.com/ansrivas/GNG
+ - http://neupy.com/apidocs/neupy.algorithms.competitive.growing_neural_gas.html
+ - https://github.com/itdxer/neupy/blob/master/notebooks/growing-neural-gas/Growing%20Neural%20Gas%20animated.ipynb
+ - https://github.com/itdxer/neupy/blob/master/neupy/algorithms/competitive/growing_neural_gas.py
+ - https://github.com/ansrivas/GNG

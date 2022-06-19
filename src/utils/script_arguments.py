@@ -2,6 +2,7 @@ import argparse
 
 
 def get_script_args():
+    """Returns the arguments passed to the script"""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--train",

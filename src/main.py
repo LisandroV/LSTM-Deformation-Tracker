@@ -31,9 +31,14 @@ history: ContourHistory = ContourHistory(control_points_file)
 
 
 # PLOT DATA --------------------------------------------------------------------
-# plotter.plot_control_point_history(history)
-# plotter.plot_finger_position(positions)
-# plotter.plot_finger_force(forces)
+
+# To print data to analize on gng
+# for t in range(100):
+#     print(history.reconstruct_contour(t))
+
+plotter.plot_control_point_history(history)
+plotter.plot_finger_position(finger_positions)
+plotter.plot_finger_force(forces)
 
 
 # CREATE DATASET ---------------------------------------------------------------

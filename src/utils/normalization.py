@@ -21,9 +21,7 @@ def get_scale(polygons):
         centred_polygon = polygon[..., :2] - geom_means[index]
         min_maxs.append([np.min(centred_polygon), np.max(centred_polygon)])
     std = np.max(min_maxs)  # VERSION 3: use np.max instead of np.std
-    print(
-        f"Normalization Params:[\n\tmax_coord_val:{np.max(min_maxs)}\n\tmin_coord_val:{np.min(min_maxs)}\n\tstd:{std}\n]"
-    )
+
     return std
 
 
@@ -53,3 +51,21 @@ def normalize_polygons(polygons):
         polygon[..., :2] /= scale
 
     return transformed_polygons
+
+
+def normalize_finger_position(polygons, finger_positions):
+    norm_finger_positions = np.copy(finger_positions)
+    means = get_polygons_centers(polygons)
+    scale = get_scale(polygons)
+
+    norm_finger_positions[..., :2] -= means[0]
+    norm_finger_positions[..., :2] /= scale
+
+    return norm_finger_positions
+
+
+def normalize_force(forces):
+    norm = np.min(forces)
+    if norm == 0:
+        raise Exception("Is not possible to normalize with norm equal to zero.")
+    return forces / norm

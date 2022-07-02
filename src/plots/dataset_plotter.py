@@ -75,10 +75,10 @@ def plot_finger_position(finger_position_data: np.ndarray) -> None:
 
 
 @plot_flag_decorator
-def plot_finger_force(finger_force_data) -> None:
+def plot_finger_force(finger_force_data, title="Finger force") -> None:
     """Plots the finger force through time."""
-    fig = plt.figure("Finger force")
-    fig.suptitle("Finger force in time")
+    fig = plt.figure("Finger Force")
+    fig.suptitle(title)
     ax = fig.add_subplot(111)
 
     x = np.arange(finger_force_data.size)

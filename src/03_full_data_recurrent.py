@@ -1,5 +1,5 @@
 """
-In this file a basic recurrent neural network is trained with the npy data using only the control points.
+In this file a basic recurrent neural network is trained with all data: control points, finger force and position.
 """
 
 import os
@@ -32,13 +32,27 @@ TRAIN_MODEL: bool = script_args.train
 
 
 # READ FORCE FILE --------------------------------------------------------------
-finger_force_file: str = os.path.join(TRAIN_DATA_DIR, "finger_force.txt")
-forces: np.ndarray = read_finger_forces_file(finger_force_file)
+train_finger_force_file: str = os.path.join(TRAIN_DATA_DIR, "finger_force.txt")
+train_forces: np.ndarray = read_finger_forces_file(train_finger_force_file)
+
+validation_finger_force_file: str = os.path.join(
+    VALIDATION_DATA_DIR, "finger_force.txt"
+)
+validation_forces: np.ndarray = read_finger_forces_file(validation_finger_force_file)
 
 
 # READ FINGER POSITION FILE ----------------------------------------------------
-finger_positions_file: str = os.path.join(TRAIN_DATA_DIR, "finger_position.txt")
-finger_positions: np.ndarray = read_finger_positions_file(finger_positions_file)
+train_finger_positions_file: str = os.path.join(TRAIN_DATA_DIR, "finger_position.txt")
+train_finger_positions: np.ndarray = read_finger_positions_file(
+    train_finger_positions_file
+)
+
+valid_finger_positions_file: str = os.path.join(
+    VALIDATION_DATA_DIR, "finger_position.txt"
+)
+validation_finger_positions: np.ndarray = read_finger_positions_file(
+    valid_finger_positions_file
+)
 
 
 # READ CONTROL POINTS ----------------------------------------------------------
@@ -50,34 +64,51 @@ validation_polygons = np.load(valid_cp_file)
 
 # NORMALIZATION
 norm_train_polygons = normalization.normalize_polygons(train_polygons)
-polygons_means = normalization.get_polygons_centers(train_polygons)
+norm_train_finger_positions = normalization.normalize_finger_position(
+    train_polygons, train_finger_positions
+)
+norm_train_forces = normalization.normalize_force(train_forces)
 
 norm_valid_polygons = normalization.normalize_polygons(validation_polygons)
+norm_valid_finger_position = normalization.normalize_finger_position(
+    validation_polygons, validation_finger_positions
+)
+norm_valid_forces = normalization.normalize_force(validation_forces)
+
 
 # PLOT DATA --------------------------------------------------------------------
 time_steps = train_polygons.shape[0]
 
-mean_plot = lambda ax: ax.plot(
-    range(time_steps), polygons_means[:, 0], polygons_means[:, 1]
-)
-
 origin_axis_plot = lambda ax: ax.plot(
     range(time_steps), [0] * time_steps, [0] * time_steps
 )
-plotter.plot_npz_control_points(
-    norm_train_polygons, title="Training Control Points", plot_cb=origin_axis_plot
-)
-plotter.plot_npz_control_points(
-    norm_valid_polygons, title="Validation Control Points", plot_cb=origin_axis_plot
-)
-plotter.plot_finger_position(finger_positions)
 
-plotter.plot_finger_force(forces)
+# curryfied
+finger_position_plot = lambda positions: lambda ax: ax.scatter(
+    range(time_steps), positions[:, 0], positions[:, 1], s=10
+)
+
+plotter.plot_npz_control_points(
+    norm_train_polygons,
+    title="Normalized Training Control Points",
+    plot_cb=finger_position_plot(norm_train_finger_positions),
+)
+plotter.plot_npz_control_points(
+    norm_valid_polygons,
+    title="Normalized Validation Control Points",
+    plot_cb=finger_position_plot(norm_valid_finger_position),
+)
+
+plotter.plot_finger_force(norm_train_forces, title="Normalized Training Finger Force")
+
+plotter.plot_finger_force(norm_valid_forces, title="Normalized Validation Finger Force")
 
 
 # CREATE DATASET ---------------------------------------------------------------
 X_train, y_train = create_basic_dataset(norm_train_polygons)
 X_valid, y_valid = create_basic_dataset(norm_valid_polygons)
+
+sys.exit()
 
 # CREATE RECURRENT MODEL -------------------------------------------------------
 model = keras.models.Sequential(

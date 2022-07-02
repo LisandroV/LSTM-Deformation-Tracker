@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def create_basic_dataset(polygons: np.ndarray):
     """Creates dataset with data from a npy file"""
     X_data = np.reshape(polygons, (polygons.shape[0], -1))
@@ -13,3 +14,7 @@ def create_basic_dataset(polygons: np.ndarray):
     y_data = np.array([y_data])
 
     return X_data, y_data
+
+
+def create_dataset(polygons: np.ndarray, finger_positions: np.ndarray):
+    pass

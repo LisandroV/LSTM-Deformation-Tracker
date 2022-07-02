@@ -134,12 +134,12 @@ else:
 # PREDICTION -------------------------------------------------------------------
 
 # MULTIPLE-STEP PREDICTION
-to_predict = X_train[:,:1,:]
+to_predict = X_train[:, :1, :]
 predictions = []
 for step in range(time_steps):
     y_pred = model.predict(to_predict)
     to_predict = y_pred
-    predictions.append(np.reshape(y_pred,-1))
+    predictions.append(np.reshape(y_pred, -1))
 predicted_polygons = np.reshape(np.array(predictions), (100, 47, 2))
 
 plotter.plot_npz_control_points(

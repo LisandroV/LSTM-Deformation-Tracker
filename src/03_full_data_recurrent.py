@@ -14,7 +14,7 @@ from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
-from utils.npy_helpers import create_basic_dataset
+from utils.npy_helpers import create_dataset
 import plots.dataset_plotter as plotter
 import utils.logs as util_logs
 import utils.normalization as normalization
@@ -105,8 +105,11 @@ plotter.plot_finger_force(norm_valid_forces, title="Normalized Validation Finger
 
 
 # CREATE DATASET ---------------------------------------------------------------
-X_train, y_train = create_basic_dataset(norm_train_polygons)
-X_valid, y_valid = create_basic_dataset(norm_valid_polygons)
+# CONTINUE: create dataset
+X_train, y_train = create_dataset(
+    norm_train_polygons, norm_train_finger_positions, norm_train_forces
+)
+# X_valid, y_valid = create_basic_dataset(norm_valid_polygons)
 
 sys.exit()
 

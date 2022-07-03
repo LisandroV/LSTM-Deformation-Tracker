@@ -1,5 +1,7 @@
 """
 In this file a basic recurrent neural network is trained with all data: control points, finger force and position.
+
+results: there is an enhacement in the multiple step prediction. The control points are pushed to the center.
 """
 
 import os
@@ -70,7 +72,7 @@ norm_train_finger_positions = normalization.normalize_finger_position(
 norm_train_forces = normalization.normalize_force(train_forces)
 
 norm_valid_polygons = normalization.normalize_polygons(validation_polygons)
-norm_valid_finger_position = normalization.normalize_finger_position(
+norm_valid_finger_positions = normalization.normalize_finger_position(
     validation_polygons, validation_finger_positions
 )
 norm_valid_forces = normalization.normalize_force(validation_forces)
@@ -96,7 +98,7 @@ plotter.plot_npz_control_points(
 plotter.plot_npz_control_points(
     norm_valid_polygons,
     title="Normalized Validation Control Points",
-    plot_cb=finger_position_plot(norm_valid_finger_position),
+    plot_cb=finger_position_plot(norm_valid_finger_positions),
 )
 
 plotter.plot_finger_force(norm_train_forces, title="Normalized Training Finger Force")
@@ -109,14 +111,14 @@ plotter.plot_finger_force(norm_valid_forces, title="Normalized Validation Finger
 X_train, y_train = create_dataset(
     norm_train_polygons, norm_train_finger_positions, norm_train_forces
 )
-# X_valid, y_valid = create_basic_dataset(norm_valid_polygons)
-
-sys.exit()
+X_valid, y_valid = create_dataset(
+    norm_valid_polygons, norm_valid_finger_positions, norm_valid_forces
+)
 
 # CREATE RECURRENT MODEL -------------------------------------------------------
 model = keras.models.Sequential(
     [
-        keras.layers.SimpleRNN(94, return_sequences=True, input_shape=[None, 94]),
+        keras.layers.SimpleRNN(94, return_sequences=True, input_shape=[None, 97]),
     ]
 )
 
@@ -165,12 +167,17 @@ to_predict = X_train[:, :1, :]
 predictions = []
 for step in range(time_steps):
     y_pred = model.predict(to_predict)
-    to_predict = y_pred
+    to_predict = np.append(
+        np.append(y_pred.reshape(94), norm_train_finger_positions[step]),
+        [norm_train_forces[step]],
+    ).reshape(1, 1, 97)
     predictions.append(np.reshape(y_pred, -1))
 predicted_polygons = np.reshape(np.array(predictions), (100, 47, 2))
 
 plotter.plot_npz_control_points(
-    predicted_polygons[1:], title="Multiple-Step Prediction", plot_cb=origin_axis_plot
+    predicted_polygons[1:],
+    title="Multiple-Step Prediction",
+    plot_cb=finger_position_plot(norm_train_finger_positions),
 )
 
 # ONE-STEP PREDICTION
@@ -180,7 +187,7 @@ predicted_polygons = np.reshape(y_pred, (100, 47, 2))
 plotter.plot_npz_control_points(
     predicted_polygons[1:],
     title="One-Step Prediction On Train Set",
-    plot_cb=origin_axis_plot,
+    plot_cb=finger_position_plot(norm_train_finger_positions),
 )
 
 # PREDICT ON VALIDATION SET
@@ -190,5 +197,5 @@ predicted_polygons = np.reshape(y_pred, (100, 47, 2))
 plotter.plot_npz_control_points(
     predicted_polygons[1:],
     title="One-Step Prediction On Validation Set",
-    plot_cb=origin_axis_plot,
+    plot_cb=finger_position_plot(norm_valid_finger_positions),
 )

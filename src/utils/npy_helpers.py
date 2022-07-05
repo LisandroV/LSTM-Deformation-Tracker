@@ -16,9 +16,10 @@ def create_basic_dataset(polygons: np.ndarray):
     return X_data, y_data
 
 
-def create_dataset(
+def create_polygon_datapoint(
     polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray
 ):
+    """returns one data instance by merging the polygons, finger_positions and finger_force together along with the expected result"""
     flat_polygons = np.reshape(polygons, (polygons.shape[0], -1))
 
     # create X_data
@@ -33,8 +34,52 @@ def create_dataset(
     y_data[:-1] = flat_polygons[1:]
     y_data[-1] = flat_polygons[-1]
 
+    return X_data, y_data
+
+
+def create_dataset(
+    polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray
+):
+    """
+    Creates the dataset with only one video instance, which means only one polygon sequence with finger position and force
+    """
+    X_instance, y_instance = create_polygon_datapoint(
+        polygons, finger_positions, finger_force
+    )
+
     # We wrap it since there is only one data sample, there would be more if there were more videos.
-    X_data = np.array([X_data])
-    y_data = np.array([y_data])
+    X_data = np.array([X_instance])
+    y_data = np.array([y_instance])
 
     return X_data, y_data
+
+
+def rotate_plygons(polygons: np.ndarray):
+    """
+    Takes the first coordinate of the polygon and puts it in the end of the list
+    """
+    rotated_polygons = np.zeros(polygons.shape)
+    for index, polygon in enumerate(polygons):
+        rotated_polygons[index, :-1] = polygon[1:]
+        rotated_polygons[index, -1] = polygon[0]
+    return rotated_polygons
+
+
+def create_rotating_coordinates_dataset(
+    polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray
+):
+    """
+    Data multiplication by rotating the coordinates of the initial polygon sequence
+    """
+    num_points = polygons.shape[1]
+    rotated_polygons = polygons
+    X_data, y_data = [], []
+    for _ in range(num_points):
+        X_instance, y_instance = create_polygon_datapoint(
+            rotated_polygons, finger_positions, finger_force
+        )
+        X_data.append(X_instance)
+        y_data.append(y_instance)
+        rotated_polygons = rotate_plygons(rotated_polygons)
+
+    return np.array(X_data), np.array(y_data)

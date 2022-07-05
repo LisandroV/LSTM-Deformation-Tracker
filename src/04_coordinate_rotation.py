@@ -1,7 +1,8 @@
 """
-In this file a basic recurrent neural network is trained with all data: control points, finger force and position.
+in this file the basic model is trained with the data rotating coordinates. This means every neuron learns from all the coordinates
 
-results: there is an enhacement in the multiple step prediction. The control points are pushed to the center.
+results: The result on the validation set was very good, and the validation was constantly decreasing until the 2000 epoch. Multiple-step is terrible, it look like spaghetti.
+* using LSTM the result on the multiple-step prediction was better, but on the validation se was worst than using the simple ones.
 """
 
 import os
@@ -16,7 +17,7 @@ from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
-from utils.npy_helpers import create_dataset
+from utils.npy_helpers import create_rotating_coordinates_dataset
 import plots.dataset_plotter as plotter
 import utils.logs as util_logs
 import utils.normalization as normalization
@@ -28,7 +29,7 @@ script_args = get_script_args()
 
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
-MODEL_NAME: str = "full_data_recurrent"
+MODEL_NAME: str = "04_coordinate_rotation"
 SAVED_MODEL_FILE: str = f"saved_models/best_{MODEL_NAME}_model.h5"
 TRAIN_MODEL: bool = script_args.train
 
@@ -108,10 +109,10 @@ plotter.plot_finger_force(norm_valid_forces, title="Normalized Validation Finger
 
 # CREATE DATASET ---------------------------------------------------------------
 # CONTINUE: create dataset
-X_train, y_train = create_dataset(
+X_train, y_train = create_rotating_coordinates_dataset(
     norm_train_polygons, norm_train_finger_positions, norm_train_forces
 )
-X_valid, y_valid = create_dataset(
+X_valid, y_valid = create_rotating_coordinates_dataset(
     norm_valid_polygons, norm_valid_finger_positions, norm_valid_forces
 )
 
@@ -145,7 +146,7 @@ if TRAIN_MODEL:
             X_valid,
             y_valid,
         ),
-        epochs=1000,
+        epochs=3000,
         callbacks=[tensorboard_cb],
     )
 
@@ -163,7 +164,7 @@ else:
 # PREDICTION -------------------------------------------------------------------
 
 # MULTIPLE-STEP PREDICTION
-to_predict = X_train[:, :1, :]
+to_predict = X_train[:1, :1, :]
 predictions = []
 for step in range(time_steps):
     y_pred = model.predict(to_predict)
@@ -181,7 +182,7 @@ plotter.plot_npz_control_points(
 )
 
 # ONE-STEP PREDICTION
-y_pred = model.predict(X_train)
+y_pred = model.predict(X_train[:1])
 predicted_polygons = np.reshape(y_pred, (100, 47, 2))
 
 plotter.plot_npz_control_points(
@@ -191,7 +192,7 @@ plotter.plot_npz_control_points(
 )
 
 # PREDICT ON VALIDATION SET
-y_pred = model.predict(X_valid)
+y_pred = model.predict(X_valid[:1])
 predicted_polygons = np.reshape(y_pred, (100, 47, 2))
 
 plotter.plot_npz_control_points(

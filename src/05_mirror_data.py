@@ -1,8 +1,8 @@
 """
-In this file the basic model is trained with the data rotating coordinates. This means every neuron learns from all the coordinates
+Data augmentation by mirroring data
+The model is trained with sponge_center and the mirrored data of sponge_longside. 
 
-Results: The result on the validation set was very good, and the validation was constantly decreasing until the 2000 epoch. Multiple-step is terrible, it look like spaghetti.
-* using LSTM the result on the multiple-step prediction was better, but on the validation set was worst than using the simple ones.
+Results: Amazing results on one-step prediction on validation set.
 """
 
 import os
@@ -17,7 +17,7 @@ from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
-from utils.npy_helpers import create_rotating_coordinates_dataset
+from utils.npy_helpers import create_rotating_coordinates_dataset, mirror_data_x_axis
 import plots.dataset_plotter as plotter
 import utils.logs as util_logs
 import utils.normalization as normalization
@@ -29,7 +29,7 @@ script_args = get_script_args()
 
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
-MODEL_NAME: str = "04_coordinate_rotation"
+MODEL_NAME: str = "05_mirror_data"
 SAVED_MODEL_FILE: str = f"saved_models/best_{MODEL_NAME}_model.h5"
 TRAIN_MODEL: bool = script_args.train
 
@@ -96,6 +96,7 @@ plotter.plot_npz_control_points(
     title="Normalized Training Control Points",
     plot_cb=finger_position_plot(norm_train_finger_positions),
 )
+
 plotter.plot_npz_control_points(
     norm_valid_polygons,
     title="Normalized Validation Control Points",
@@ -108,9 +109,28 @@ plotter.plot_finger_force(norm_valid_forces, title="Normalized Validation Finger
 
 
 # CREATE DATASET ---------------------------------------------------------------
-X_train, y_train = create_rotating_coordinates_dataset(
+mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_axis(
+    norm_valid_polygons, norm_valid_finger_positions, norm_valid_forces
+)
+
+plotter.plot_npz_control_points(
+    mirrored_polygons,
+    title="Mirrored Data for training",
+    plot_cb=finger_position_plot(mirrored_finger_positions),
+)
+
+X_train_mirror, y_train_mirror = create_rotating_coordinates_dataset(
+    mirrored_polygons, mirrored_finger_positions, mirrored_forces
+)
+
+X_train_center_sponge, y_train_center_sponge = create_rotating_coordinates_dataset(
     norm_train_polygons, norm_train_finger_positions, norm_train_forces
 )
+
+# Data augmentation
+X_train = np.concatenate((X_train_center_sponge, X_train_mirror))
+y_train = np.concatenate((y_train_center_sponge, y_train_mirror))
+
 X_valid, y_valid = create_rotating_coordinates_dataset(
     norm_valid_polygons, norm_valid_finger_positions, norm_valid_forces
 )

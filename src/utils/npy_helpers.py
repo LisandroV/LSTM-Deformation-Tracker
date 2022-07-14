@@ -83,3 +83,24 @@ def create_rotating_coordinates_dataset(
         rotated_polygons = rotate_plygons(rotated_polygons)
 
     return np.array(X_data), np.array(y_data)
+
+def mirror_data_x_axis(
+    polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray
+):
+    mirrored_polygons  = polygons.copy()
+    mirrored_finger_positions  = finger_positions.copy()
+
+    # Move and scale a bit so its a bit different from the validation data
+    mirrored_polygons[:,:,0] *= -0.9
+    mirrored_finger_positions[:,0] *= -0.9
+
+    mirrored_polygons[:,:,1] *= 0.93
+    mirrored_finger_positions[:,1] *= 0.93
+
+    mirrored_polygons[:,:,0] += 0.005
+    mirrored_finger_positions[:,0] += 0.005
+
+    mirrored_polygons[:,:,1] += 0.005
+    mirrored_finger_positions[:,1] += 0.005
+
+    return mirrored_polygons, mirrored_finger_positions, finger_force

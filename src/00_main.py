@@ -32,9 +32,11 @@ history: ContourHistory = ContourHistory(control_points_file)
 
 # PLOT DATA --------------------------------------------------------------------
 
-# To print data to analize on gng
+# To print data to analize on GNG
+# print("[")
 # for t in range(100):
-#     print(history.reconstruct_contour(t))
+#     print(f"{history.reconstruct_contour(t)},")
+# print("]")
 
 plotter.plot_control_point_history(history)
 plotter.plot_finger_position(finger_positions)

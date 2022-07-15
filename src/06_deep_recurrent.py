@@ -1,8 +1,7 @@
 """
-Data augmentation by mirroring data
-The model is trained with sponge_center and the mirrored data of sponge_longside. 
+Deep recurrent netwok
 
-Results: Amazing results on one-step prediction on validation set.
+Results: It was worst than previous experiment, validation loss: ~0.0350 compared against ~0.0110 from the previous experiment.
 """
 
 import os
@@ -29,7 +28,7 @@ script_args = get_script_args()
 
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
-MODEL_NAME: str = "05_mirror_data"
+MODEL_NAME: str = "06_deep_recurrent"
 SAVED_MODEL_FILE: str = f"saved_models/best_{MODEL_NAME}_model.h5"
 TRAIN_MODEL: bool = script_args.train
 
@@ -139,6 +138,7 @@ X_valid, y_valid = create_rotating_coordinates_dataset(
 model = keras.models.Sequential(
     [
         keras.layers.SimpleRNN(94, return_sequences=True, input_shape=[None, 97]),
+        keras.layers.SimpleRNN(94, return_sequences=True),
     ]
 )
 
@@ -165,7 +165,7 @@ if TRAIN_MODEL:
             X_valid,
             y_valid,
         ),
-        epochs=3000,
+        epochs=10000,
         callbacks=[tensorboard_cb],
     )
 
@@ -176,7 +176,7 @@ else:
         print("Using stored model.")
     except:
         sys.exit(
-            "Error:  There is no model saved.\n\tTo use the option train_model=False, the model has to be trained before."
+            "Error:  There is no model saved.\n\tTo use the flag --train, the model has to be trained before."
         )
 
 

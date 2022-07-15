@@ -165,7 +165,7 @@ if TRAIN_MODEL:
             X_valid,
             y_valid,
         ),
-        epochs=3000,
+        epochs=6000,
         callbacks=[tensorboard_cb],
     )
 
@@ -176,7 +176,7 @@ else:
         print("Using stored model.")
     except:
         sys.exit(
-            "Error:  There is no model saved.\n\tTo use the option train_model=False, the model has to be trained before."
+            "Error:  There is no model saved.\n\tTo use the flag --train, the model has to be trained before."
         )
 
 

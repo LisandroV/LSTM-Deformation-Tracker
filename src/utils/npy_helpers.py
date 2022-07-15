@@ -87,6 +87,9 @@ def create_rotating_coordinates_dataset(
 def mirror_data_x_axis(
     polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray
 ):
+    """
+    Apply a transformation on the polygon and finger position
+    """
     mirrored_polygons  = polygons.copy()
     mirrored_finger_positions  = finger_positions.copy()
 
@@ -104,3 +107,9 @@ def mirror_data_x_axis(
     mirrored_finger_positions[:,1] += 0.005
 
     return mirrored_polygons, mirrored_finger_positions, finger_force
+
+# CONTINUE: Just the y_train has to be modified to stack 10 predictions ahead
+def create_multiple_step_dataset(
+    polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray
+):
+    pass

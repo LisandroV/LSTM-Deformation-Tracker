@@ -108,8 +108,11 @@ def mirror_data_x_axis(
 
     return mirrored_polygons, mirrored_finger_positions, finger_force
 
-# CONTINUE: Just the y_train has to be modified to stack 10 predictions ahead
 def create_multiple_step_dataset(
-    polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray
+    polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray, step_size: int=10
 ):
-    pass
+    X_data, y_data = create_dataset(polygons, finger_positions, finger_force)
+    y_step_data = []
+    for i in range(polygons.shape[0] - step_size):
+        y_step_data.append(y_data[0,i:i+step_size].reshape(-1))
+    return X_data[:,:-step_size], np.array([y_step_data])

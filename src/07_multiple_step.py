@@ -2,6 +2,8 @@
 Multiple step prediction
 
 Results: ?
+    epochs: 6000 loss: 5.2699e-05 - val_loss: 0.3379
+
 """
 
 import os
@@ -26,9 +28,11 @@ tf.random.set_seed(42)
 
 script_args = get_script_args()
 
+STEP_SIZE=10
+
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
-MODEL_NAME: str = "07_multiple_step"
+MODEL_NAME: str = f"07_multiple_step_{STEP_SIZE}"
 SAVED_MODEL_FILE: str = f"saved_models/best_{MODEL_NAME}_model.h5"
 TRAIN_MODEL: bool = script_args.train
 
@@ -119,7 +123,7 @@ plotter.plot_npz_control_points(
 )
 
 X_train_mirror, y_train_mirror = create_multiple_step_dataset(
-    mirrored_polygons, mirrored_finger_positions, mirrored_forces
+    mirrored_polygons, mirrored_finger_positions, mirrored_forces, STEP_SIZE
 )
 
 X_train_center_sponge, y_train_center_sponge = create_multiple_step_dataset(
@@ -138,6 +142,7 @@ X_valid, y_valid = create_multiple_step_dataset(
 model = keras.models.Sequential(
     [
         keras.layers.SimpleRNN(94, return_sequences=True, input_shape=[None, 97]),
+        keras.layers.Dense(94*STEP_SIZE)
     ]
 )
 
@@ -168,7 +173,7 @@ if TRAIN_MODEL:
         callbacks=[tensorboard_cb],
     )
 
-    save_best_model(model, SAVED_MODEL_FILE, X_train, y_train)
+    save_best_model(model, SAVED_MODEL_FILE, X_valid, y_valid)
 else:
     try:
         model = keras.models.load_model(SAVED_MODEL_FILE)
@@ -182,26 +187,26 @@ else:
 # PREDICTION -------------------------------------------------------------------
 
 # MULTIPLE-STEP PREDICTION
-to_predict = X_train[:1, :1, :]
-predictions = []
-for step in range(time_steps):
-    y_pred = model.predict(to_predict)
-    to_predict = np.append(
-        np.append(y_pred.reshape(94), norm_train_finger_positions[step]),
-        [norm_train_forces[step]],
-    ).reshape(1, 1, 97)
-    predictions.append(np.reshape(y_pred, -1))
-predicted_polygons = np.reshape(np.array(predictions), (100, 47, 2))
+# to_predict = X_train[:1, :1, :]
+# predictions = []
+# for step in range(time_steps):
+#     y_pred = model.predict(to_predict)
+#     to_predict = np.append(
+#         np.append(y_pred.reshape(94), norm_train_finger_positions[step]),
+#         [norm_train_forces[step]],
+#     ).reshape(1, 1, 97)
+#     predictions.append(np.reshape(y_pred, -1))
+# predicted_polygons = np.reshape(np.array(predictions), (100, 47, 2))
 
-plotter.plot_npz_control_points(
-    predicted_polygons[1:],
-    title="Multiple-Step Prediction",
-    plot_cb=finger_position_plot(norm_train_finger_positions),
-)
+# plotter.plot_npz_control_points(
+#     predicted_polygons[1:],
+#     title="Multiple-Step Prediction",
+#     plot_cb=finger_position_plot(norm_train_finger_positions),
+# )
 
 # ONE-STEP PREDICTION
 y_pred = model.predict(X_train[:1])
-predicted_polygons = np.reshape(y_pred, (100, 47, 2))
+predicted_polygons = np.reshape(y_pred[:,:,:94], (90, 47, 2))
 
 plotter.plot_npz_control_points(
     predicted_polygons[1:],
@@ -211,7 +216,7 @@ plotter.plot_npz_control_points(
 
 # PREDICT ON VALIDATION SET
 y_pred = model.predict(X_valid[:1])
-predicted_polygons = np.reshape(y_pred, (100, 47, 2))
+predicted_polygons = np.reshape(y_pred[:,:,:94], (90, 47, 2))
 
 plotter.plot_npz_control_points(
     predicted_polygons[1:],

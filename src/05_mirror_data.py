@@ -31,7 +31,7 @@ TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
 MODEL_NAME: str = "05_mirror_data"
 SAVED_MODEL_FILE: str = f"saved_models/best_{MODEL_NAME}_model.h5"
-TRAIN_MODEL: bool = script_args.train
+SHOULD_TRAIN_MODEL: bool = script_args.train
 
 
 # READ FORCE FILE --------------------------------------------------------------
@@ -149,7 +149,7 @@ model.compile(loss="mse", optimizer="adam")
 
 # SETUP TENSORBOARD LOGS -------------------------------------------------------
 log_name = util_logs.get_log_filename(MODEL_NAME)
-tensorboard_cb = keras.callbacks.TensorBoard(log_name)
+tensorboard_cb = keras.callbacks.TensorBoard(log_dir=log_name, histogram_freq=100, write_graph=True)
 
 
 # EARLY STOPPING
@@ -157,7 +157,7 @@ early_stopping_cb = keras.callbacks.EarlyStopping(patience=20, min_delta=0.0001)
 
 
 # TRAIN ------------------------------------------------------------------------
-if TRAIN_MODEL:
+if SHOULD_TRAIN_MODEL:
     history = model.fit(
         X_train,
         y_train,
@@ -165,11 +165,11 @@ if TRAIN_MODEL:
             X_valid,
             y_valid,
         ),
-        epochs=6000,
+        epochs=2000,
         callbacks=[tensorboard_cb],
     )
 
-    save_best_model(model, SAVED_MODEL_FILE, X_train, y_train)
+    save_best_model(model, SAVED_MODEL_FILE, X_valid, y_valid)
 else:
     try:
         model = keras.models.load_model(SAVED_MODEL_FILE)

@@ -28,7 +28,7 @@ TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
 MODEL_NAME: str = "basic_recurrent_npy"
 SAVED_MODEL_FILE: str = f"saved_models/best_{MODEL_NAME}_model.h5"
-TRAIN_MODEL: bool = script_args.train
+SHOULD_TRAIN_MODEL: bool = script_args.train
 
 
 # READ FORCE FILE --------------------------------------------------------------
@@ -101,7 +101,7 @@ early_stopping_cb = keras.callbacks.EarlyStopping(patience=20, min_delta=0.0001)
 
 
 # TRAIN ------------------------------------------------------------------------
-if TRAIN_MODEL:
+if SHOULD_TRAIN_MODEL:
     history = model.fit(
         X_train,
         y_train,

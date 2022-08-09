@@ -93,18 +93,8 @@ def mirror_data_x_axis(
     mirrored_polygons  = polygons.copy()
     mirrored_finger_positions  = finger_positions.copy()
 
-    # Move and scale a bit so its a bit different from the validation data
-    mirrored_polygons[:,:,0] *= -0.9
-    mirrored_finger_positions[:,0] *= -0.9
-
-    mirrored_polygons[:,:,1] *= 0.93
-    mirrored_finger_positions[:,1] *= 0.93
-
-    mirrored_polygons[:,:,0] += 0.005
-    mirrored_finger_positions[:,0] += 0.005
-
-    mirrored_polygons[:,:,1] += 0.005
-    mirrored_finger_positions[:,1] += 0.005
+    mirrored_polygons[:,:,0] *= -1
+    mirrored_finger_positions[:,0] *= -1
 
     return mirrored_polygons, mirrored_finger_positions, finger_force
 
@@ -116,3 +106,10 @@ def create_multiple_step_dataset(
     for i in range(polygons.shape[0] - step_size):
         y_step_data.append(y_data[0,i:i+step_size].reshape(-1))
     return X_data[:,:-step_size], np.array([y_step_data])
+
+def create_single_control_point_dataset(polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray):
+    """
+    every sequence contains only the coordinates for a single control point along with the finger force and position.
+    """
+    #CONTINUE: fix this return
+    return create_rotating_coordinates_dataset(polygons, finger_positions, finger_force)

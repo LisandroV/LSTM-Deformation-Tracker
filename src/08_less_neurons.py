@@ -17,7 +17,7 @@ from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
-from utils.npy_helpers import create_rotating_coordinates_dataset, mirror_data_x_axis
+from utils.dataset_creation import create_single_control_point_dataset, mirror_data_x_axis
 import plots.dataset_plotter as plotter
 import utils.logs as util_logs
 import utils.normalization as normalization
@@ -91,21 +91,21 @@ finger_position_plot = lambda positions: lambda ax: ax.scatter(
     range(time_steps), positions[:, 0], positions[:, 1], s=10
 )
 
-plotter.plot_npz_control_points(
-    norm_train_polygons,
-    title="Normalized Training Control Points",
-    plot_cb=finger_position_plot(norm_train_finger_positions),
-)
+# plotter.plot_npz_control_points(
+#     norm_train_polygons,
+#     title="Normalized Training Control Points",
+#     plot_cb=finger_position_plot(norm_train_finger_positions),
+# )
 
-plotter.plot_npz_control_points(
-    norm_valid_polygons,
-    title="Normalized Validation Control Points",
-    plot_cb=finger_position_plot(norm_valid_finger_positions),
-)
+# plotter.plot_npz_control_points(
+#     norm_valid_polygons,
+#     title="Normalized Validation Control Points",
+#     plot_cb=finger_position_plot(norm_valid_finger_positions),
+# )
 
-plotter.plot_finger_force(norm_train_forces, title="Normalized Training Finger Force")
+# plotter.plot_finger_force(norm_train_forces, title="Normalized Training Finger Force")
 
-plotter.plot_finger_force(norm_valid_forces, title="Normalized Validation Finger Force")
+# plotter.plot_finger_force(norm_valid_forces, title="Normalized Validation Finger Force")
 
 
 # CREATE DATASET ---------------------------------------------------------------
@@ -113,17 +113,17 @@ mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_ax
     norm_valid_polygons, norm_valid_finger_positions, norm_valid_forces
 )
 
-plotter.plot_npz_control_points(
-    mirrored_polygons,
-    title="Mirrored Data for training",
-    plot_cb=finger_position_plot(mirrored_finger_positions),
-)
+# plotter.plot_npz_control_points(
+#     mirrored_polygons,
+#     title="Mirrored Data for training",
+#     plot_cb=finger_position_plot(mirrored_finger_positions),
+# )
 
-X_train_mirror, y_train_mirror = create_rotating_coordinates_dataset(
+X_train_mirror, y_train_mirror = create_single_control_point_dataset(
     mirrored_polygons, mirrored_finger_positions, mirrored_forces
 )
 
-X_train_center_sponge, y_train_center_sponge = create_rotating_coordinates_dataset(
+X_train_center_sponge, y_train_center_sponge = create_single_control_point_dataset(
     norm_train_polygons, norm_train_finger_positions, norm_train_forces
 )
 
@@ -131,14 +131,17 @@ X_train_center_sponge, y_train_center_sponge = create_rotating_coordinates_datas
 X_train = np.concatenate((X_train_center_sponge, X_train_mirror))
 y_train = np.concatenate((y_train_center_sponge, y_train_mirror))
 
-X_valid, y_valid = create_rotating_coordinates_dataset(
+X_valid, y_valid = create_single_control_point_dataset(
     norm_valid_polygons, norm_valid_finger_positions, norm_valid_forces
 )
+
 
 # CREATE RECURRENT MODEL -------------------------------------------------------
 model = keras.models.Sequential(
     [
-        keras.layers.SimpleRNN(94, return_sequences=True, input_shape=[None, 97]),
+        keras.layers.SimpleRNN(15, return_sequences=True, input_shape=[None, X_train.shape[2]]),
+        keras.layers.SimpleRNN(15, return_sequences=True),
+        keras.layers.Dense(2)
     ]
 )
 
@@ -182,27 +185,9 @@ else:
 
 # PREDICTION -------------------------------------------------------------------
 
-# MULTIPLE-STEP PREDICTION
-to_predict = X_train[:1, :1, :]
-predictions = []
-for step in range(time_steps):
-    y_pred = model.predict(to_predict)
-    to_predict = np.append(
-        np.append(y_pred.reshape(94), norm_train_finger_positions[step]),
-        [norm_train_forces[step]],
-    ).reshape(1, 1, 97)
-    predictions.append(np.reshape(y_pred, -1))
-predicted_polygons = np.reshape(np.array(predictions), (100, 47, 2))
-
-plotter.plot_npz_control_points(
-    predicted_polygons[1:],
-    title="Multiple-Step Prediction",
-    plot_cb=finger_position_plot(norm_train_finger_positions),
-)
-
 # ONE-STEP PREDICTION
-y_pred = model.predict(X_train[:1])
-predicted_polygons = np.reshape(y_pred, (100, 47, 2))
+y_pred = model.predict(X_train[:47])
+predicted_polygons = y_pred.swapaxes(0,1)
 
 plotter.plot_npz_control_points(
     predicted_polygons[1:],
@@ -211,11 +196,31 @@ plotter.plot_npz_control_points(
 )
 
 # PREDICT ON VALIDATION SET
-y_pred = model.predict(X_valid[:1])
-predicted_polygons = np.reshape(y_pred, (100, 47, 2))
+y_pred = model.predict(X_valid[:])
+predicted_polygons = y_pred.swapaxes(0,1)
 
 plotter.plot_npz_control_points(
     predicted_polygons[1:],
     title="One-Step Prediction On Validation Set",
+    plot_cb=finger_position_plot(norm_valid_finger_positions),
+)
+
+
+# MULTIPLE-STEP PREDICTION
+cp_start_index=0 # from which control point start plotting
+offstet=47 # how many control points after cp_start_index will be plotted
+to_predict = X_valid[cp_start_index:cp_start_index+offstet, :1, :]
+predictions = []
+for step in range(time_steps):
+    y_pred = model.predict(to_predict)
+    predictions.append(y_pred)
+    to_predict = np.append(y_pred,X_train[cp_start_index:cp_start_index+offstet, step:step+1, 2:],axis=2)
+
+print(np.array(predictions).shape)
+predicted_polygons = np.array(predictions).reshape((100, offstet, 2))
+
+plotter.plot_npz_control_points(
+    predicted_polygons[:100],
+    title="Multiple-Step Prediction on Validation Set",
     plot_cb=finger_position_plot(norm_valid_finger_positions),
 )

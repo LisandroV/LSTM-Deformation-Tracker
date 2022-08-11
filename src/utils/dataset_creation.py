@@ -111,5 +111,18 @@ def create_single_control_point_dataset(polygons: np.ndarray, finger_positions: 
     """
     every sequence contains only the coordinates for a single control point along with the finger force and position.
     """
-    #CONTINUE: fix this return
-    return create_rotating_coordinates_dataset(polygons, finger_positions, finger_force)
+    # create X_data
+    X_data = [] # shape: (47, 100, 5)
+    for contol_point_index in range(polygons.shape[1]):
+        control_point_sequece = np.append(polygons[:,contol_point_index,:], finger_positions, axis=1)
+        control_point_sequece = np.append(control_point_sequece, finger_force.reshape(100,1), axis=1)
+        X_data.append(control_point_sequece)
+
+    # create y_data
+    y_data = np.zeros((47,100,2))
+    for contol_point_index in range(polygons.shape[1]):
+        control_point_sequece = polygons[:,contol_point_index,:]
+        y_data[contol_point_index,:-1] = control_point_sequece[1:]
+        y_data[contol_point_index,-1] = control_point_sequece[-1]
+        
+    return np.array(X_data), y_data

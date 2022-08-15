@@ -2,7 +2,9 @@
 Use only a few neurons for the coordinates instead of giving a neuron for every control point.
 Tis experiment is based on experiment 05.
 
-Results:
+Results: Amazing results, everything improved, with one- and multiple-step.
+* With only two recurrent neurons the model performed good on the one-step, but on the multiple-step, the output was like a tornado.
+  but adding more hidden layers fixed this issue.
 """
 
 import os
@@ -139,7 +141,7 @@ X_valid, y_valid = create_single_control_point_dataset(
 # CREATE RECURRENT MODEL -------------------------------------------------------
 model = keras.models.Sequential(
     [
-        keras.layers.SimpleRNN(15, return_sequences=True, input_shape=[None, X_train.shape[2]]),
+        keras.layers.SimpleRNN(15, return_sequences=True, input_shape=[None, 5]),
         keras.layers.SimpleRNN(15, return_sequences=True),
         keras.layers.Dense(2)
     ]
@@ -168,7 +170,7 @@ if SHOULD_TRAIN_MODEL:
             X_valid,
             y_valid,
         ),
-        epochs=2000,
+        epochs=20,
         callbacks=[tensorboard_cb],
     )
 
@@ -182,6 +184,11 @@ else:
             "Error:  There is no model saved.\n\tTo use the flag --train, the model has to be trained before."
         )
 
+
+# MODEL WEIGHTS
+weights = model.get_weights()
+for layer_index, layer_weight in enumerate(weights):
+    print(f"Layer Param #{layer_index}: ", layer_weight.shape)
 
 # PREDICTION -------------------------------------------------------------------
 

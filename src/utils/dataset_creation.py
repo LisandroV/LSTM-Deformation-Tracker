@@ -126,3 +126,20 @@ def create_single_control_point_dataset(polygons: np.ndarray, finger_positions: 
         y_data[contol_point_index,-1] = control_point_sequece[-1]
         
     return np.array(X_data), y_data
+
+def create_no_teacher_forcing_dataset(polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray):
+    """
+    """
+    X_first_control_points = polygons[0] # shape: (47,2)
+
+    # copy of the finger data sequence for every control point
+    X_finger_data = [np.append(finger_positions, finger_force.reshape(100,1), axis=1)]*47 # shape (47,100,2)
+
+    # create y_data, cp expected sequence
+    y_data = np.zeros((47,100,2))
+    for contol_point_index in range(polygons.shape[1]):
+        control_point_sequece = polygons[:,contol_point_index,:]
+        y_data[contol_point_index,:-1] = control_point_sequece[1:]
+        y_data[contol_point_index,-1] = control_point_sequece[-1]
+    
+    return X_first_control_points, np.array(X_finger_data), y_data

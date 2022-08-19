@@ -28,7 +28,7 @@ from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
-from utils.dataset_creation import create_single_control_point_dataset, mirror_data_x_axis
+from utils.dataset_creation import create_no_teacher_forcing_dataset, mirror_data_x_axis
 import plots.dataset_plotter as plotter
 import utils.logs as util_logs
 import utils.normalization as normalization
@@ -130,35 +130,45 @@ mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_ax
 #     plot_cb=finger_position_plot(mirrored_finger_positions),
 # )
 
-X_train_mirror, y_train_mirror = create_single_control_point_dataset(
+X_train_mirror_cps, X_train_mirror_finger, y_train_mirror = create_no_teacher_forcing_dataset(
     mirrored_polygons, mirrored_finger_positions, mirrored_forces
 )
 
-X_train_center_sponge, y_train_center_sponge = create_single_control_point_dataset(
+X_train_center_sponge_cps, X_train_center_sponge_finger, y_train_center_sponge = create_no_teacher_forcing_dataset(
     norm_train_polygons, norm_train_finger_positions, norm_train_forces
 )
 
 # Data augmentation
-X_train = np.concatenate((X_train_center_sponge, X_train_mirror))
+X_train_cps = np.concatenate((X_train_center_sponge_cps, X_train_center_sponge_cps))
+X_train_finger = np.concatenate((X_train_mirror_finger, X_train_center_sponge_finger))
 y_train = np.concatenate((y_train_center_sponge, y_train_mirror))
 
-X_valid, y_valid = create_single_control_point_dataset(
+
+X_valid_cps, X_valid_finger, y_valid = create_no_teacher_forcing_dataset(
     norm_valid_polygons, norm_valid_finger_positions, norm_valid_forces
 )
 
 
 # CREATE RECURRENT MODEL -------------------------------------------------------
-model = keras.models.Sequential(
-    [
-        keras.layers.SimpleRNN(15, return_sequences=True, input_shape=[None, 5]),
-        keras.layers.SimpleRNN(15, return_sequences=True),
-        keras.layers.Dense(2)
-    ]
-)
+# guide: https://www.anycodings.com/1questions/1481759/setting-the-initial-state-of-an-rnn-represented-as-a-keras-sequential-model
 
-print(model.summary())
+cp_initial_state = keras.Input((2,), name="FirstControlPointInput")
+finger_seq_input = keras.Input((None,3), name="FingerInput")
+
+rnn_1 = keras.layers.SimpleRNN(2, return_sequences=True)
+layer_1 = rnn_1(finger_seq_input, initial_state=cp_initial_state)
+
+rnn_2 = keras.layers.SimpleRNN(15, return_sequences=True)
+layer_2 = rnn_2(layer_1)
+
+output = keras.layers.Dense(2)(layer_2)
+
+model_input = [cp_initial_state] + [finger_seq_input]
+model = keras.models.Model(model_input, output)
+
 
 model.compile(loss="mse", optimizer="adam")
+print(model.summary())
 
 
 # SETUP TENSORBOARD LOGS -------------------------------------------------------
@@ -173,17 +183,17 @@ early_stopping_cb = keras.callbacks.EarlyStopping(patience=20, min_delta=0.0001)
 # TRAIN ------------------------------------------------------------------------
 if SHOULD_TRAIN_MODEL:
     history = model.fit(
-        X_train,
+        [X_train_cps] + [X_train_finger],
         y_train,
         validation_data=(
-            X_valid,
+            [X_valid_cps] + [X_valid_finger],
             y_valid,
         ),
-        epochs=20,
+        epochs=6000,
         callbacks=[tensorboard_cb],
     )
 
-    save_best_model(model, SAVED_MODEL_FILE, X_valid, y_valid)
+    save_best_model(model, SAVED_MODEL_FILE, [X_valid_cps] + [X_valid_finger], y_valid)
 else:
     try:
         model = keras.models.load_model(SAVED_MODEL_FILE)
@@ -201,42 +211,26 @@ for layer_index, layer_weight in enumerate(weights):
 
 # PREDICTION -------------------------------------------------------------------
 
-# ONE-STEP PREDICTION
-y_pred = model.predict(X_train[:47])
+# MULTIPLE-STEP PREDICTION ON TRAIN
+y_pred = model.predict([X_train_center_sponge_cps] + [X_train_center_sponge_finger])
 predicted_polygons = y_pred.swapaxes(0,1)
 
+polygons_to_show = np.append(norm_train_polygons[:1], predicted_polygons[1:]).reshape(100,47,2)
+
 plotter.plot_npz_control_points(
-    predicted_polygons[1:],
+    polygons_to_show,
     title="One-Step Prediction On Train Set",
     plot_cb=finger_position_plot(norm_train_finger_positions),
 )
 
-# PREDICT ON VALIDATION SET
-y_pred = model.predict(X_valid[:])
+# MULTIPLE-STEP PREDICTION ON VALIDATION
+y_pred = model.predict([X_valid_cps] + [X_valid_finger])
 predicted_polygons = y_pred.swapaxes(0,1)
 
+polygons_to_show = np.append(norm_valid_polygons[:1], predicted_polygons[1:]).reshape(100,47,2)
+
 plotter.plot_npz_control_points(
-    predicted_polygons[1:],
+    polygons_to_show,
     title="One-Step Prediction On Validation Set",
-    plot_cb=finger_position_plot(norm_valid_finger_positions),
-)
-
-
-# MULTIPLE-STEP PREDICTION
-cp_start_index=0 # from which control point start plotting
-offstet=47 # how many control points after cp_start_index will be plotted
-to_predict = X_valid[cp_start_index:cp_start_index+offstet, :1, :]
-predictions = []
-for step in range(time_steps):
-    y_pred = model.predict(to_predict)
-    predictions.append(y_pred)
-    to_predict = np.append(y_pred,X_train[cp_start_index:cp_start_index+offstet, step:step+1, 2:],axis=2)
-
-print(np.array(predictions).shape)
-predicted_polygons = np.array(predictions).reshape((100, offstet, 2))
-
-plotter.plot_npz_control_points(
-    predicted_polygons[:100],
-    title="Multiple-Step Prediction on Validation Set",
     plot_cb=finger_position_plot(norm_valid_finger_positions),
 )

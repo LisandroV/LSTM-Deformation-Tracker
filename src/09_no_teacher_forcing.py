@@ -13,7 +13,7 @@ This implies that the training dataset will be different from the previous model
 
 This experiment is based on Experiment-08.
 
-Results: ?
+Results: Failed Experiment, model structure was terrible, structure shoudn't have been modified.
 """
 
 import os
@@ -155,16 +155,16 @@ X_valid_cps, X_valid_finger, y_valid = create_no_teacher_forcing_dataset(
 cp_initial_state = keras.Input((2,), name="FirstControlPointInput")
 finger_seq_input = keras.Input((None,3), name="FingerInput")
 
-rnn_1 = keras.layers.SimpleRNN(2, return_sequences=True)
-layer_1 = rnn_1(finger_seq_input, initial_state=cp_initial_state)
+rnn_1 = keras.layers.SimpleRNN(15, return_sequences=True)
+layer_1 = rnn_1(finger_seq_input)
 
-rnn_2 = keras.layers.SimpleRNN(15, return_sequences=True)
-layer_2 = rnn_2(layer_1)
+rnn_2 = keras.layers.SimpleRNN(2, return_sequences=True)
+layer_2 = rnn_2(layer_1, initial_state=cp_initial_state)
 
-output = keras.layers.Dense(2)(layer_2)
+# output = keras.layers.Dense(2)(layer_2)
 
 model_input = [cp_initial_state] + [finger_seq_input]
-model = keras.models.Model(model_input, output)
+model = keras.models.Model(model_input, layer_2)
 
 
 model.compile(loss="mse", optimizer="adam")

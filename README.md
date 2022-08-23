@@ -40,6 +40,8 @@ https://mypy.readthedocs.io/en/stable/cheat_sheet_py3.html
 simple encoder-decoder, sequence to sequence:
 https://wandb.ai/ayush-thakur/dl-question-bank/reports/LSTM-RNN-in-Keras-Examples-of-One-to-Many-Many-to-One-Many-to-Many---VmlldzoyMDIzOTM#what-are-many-to-many-sequence-problems?
 
+Return sequences and return states:
+https://machinelearningmastery.com/return-sequences-and-return-states-for-lstms-in-keras/
 
 To investigate:
 

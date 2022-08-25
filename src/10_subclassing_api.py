@@ -18,7 +18,7 @@ from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
-from utils.dataset_creation import create_single_control_point_dataset, mirror_data_x_axis
+from utils.dataset_creation import create_teacher_forcing_dataset, mirror_data_x_axis
 import plots.dataset_plotter as plotter
 import utils.logs as util_logs
 import utils.normalization as normalization
@@ -120,33 +120,45 @@ mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_ax
 #     plot_cb=finger_position_plot(mirrored_finger_positions),
 # )
 
-X_train_mirror, y_train_mirror = create_single_control_point_dataset(
+X_train_mirror_cp, X_train_mirror_finger, y_train_mirror = create_teacher_forcing_dataset(
     mirrored_polygons, mirrored_finger_positions, mirrored_forces
 )
 
-X_train_center_sponge, y_train_center_sponge = create_single_control_point_dataset(
+X_train_center_sponge_cp, X_train_center_sponge_finger, y_train_center_sponge = create_teacher_forcing_dataset(
     norm_train_polygons, norm_train_finger_positions, norm_train_forces
 )
 
 # Data augmentation
-X_train = np.concatenate((X_train_center_sponge, X_train_mirror))
+X_train_cp = np.concatenate((X_train_center_sponge_cp, X_train_mirror_cp))
+X_train_finger = np.concatenate((X_train_center_sponge_finger, X_train_mirror_finger))
 y_train = np.concatenate((y_train_center_sponge, y_train_mirror))
 
-X_valid, y_valid = create_single_control_point_dataset(
+X_valid_cp, X_valid_finger, y_valid = create_teacher_forcing_dataset(
     norm_valid_polygons, norm_valid_finger_positions, norm_valid_forces
 )
 
 
 # CREATE RECURRENT MODEL -------------------------------------------------------
-model = keras.models.Sequential(
-    [
-        keras.layers.SimpleRNN(15, return_sequences=True, input_shape=[None, 5]),
-        keras.layers.SimpleRNN(15, return_sequences=True),
-        keras.layers.Dense(2)
-    ]
-)
+class DeformationTrackerModel(keras.Model):
+    def __init__(self, **kwargs):
+        super().__init__(kwargs)
+        self.hidden1 = keras.layers.SimpleRNN(15, return_sequences=True, input_shape=[None, 5])
+        self.hidden2 = keras.layers.SimpleRNN(15, return_sequences=True)
+        self.output_layer = keras.layers.Dense(2)
 
-print(model.summary())
+    # inputs = (UseTeacherForcing: bool, cp_input, finger_input)
+    def call(self, model_input):
+        control_point_input, finger_input = model_input
+        layer_input = tf.keras.layers.Concatenate()([control_point_input, finger_input])
+        hidden1 = self.hidden1(layer_input)
+        hidden2 = self.hidden2(hidden1)
+        model_output = self.output_layer(hidden2)
+
+        return model_output
+
+model = DeformationTrackerModel()
+
+# print(model.summary())
 
 model.compile(loss="mse", optimizer="adam")
 
@@ -163,17 +175,17 @@ early_stopping_cb = keras.callbacks.EarlyStopping(patience=20, min_delta=0.0001)
 # TRAIN ------------------------------------------------------------------------
 if SHOULD_TRAIN_MODEL:
     history = model.fit(
-        X_train,
+        [X_train_cp, X_train_finger],
         y_train,
         validation_data=(
-            X_valid,
+            [X_valid_cp, X_valid_finger],
             y_valid,
         ),
         epochs=20,
         callbacks=[tensorboard_cb],
     )
 
-    save_best_model(model, SAVED_MODEL_FILE, X_valid, y_valid)
+    save_best_model(model, SAVED_MODEL_FILE, [X_valid_cp, X_valid_finger], y_valid)
 else:
     try:
         model = keras.models.load_model(SAVED_MODEL_FILE)
@@ -183,6 +195,7 @@ else:
             "Error:  There is no model saved.\n\tTo use the flag --train, the model has to be trained before."
         )
 
+sys.exit()
 
 # MODEL WEIGHTS
 weights = model.get_weights()

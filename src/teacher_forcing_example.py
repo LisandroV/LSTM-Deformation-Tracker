@@ -1,5 +1,3 @@
-#CONTINUE: reproduce this tutorial https://keras.io/examples/nlp/lstm_seq2seq/
-
 #show diagrams:
 #https://towardsdatascience.com/how-to-implement-seq2seq-lstm-model-in-keras-shortcutnlp-6f355f3e5639
 #https://medium.com/deep-learning-with-keras/seq2seq-part-d-encoder-decoder-with-teacher-forcing-18a3a09a096

@@ -9,6 +9,7 @@ Results: ?
 import os
 import numpy as np
 import sys
+from functools import reduce
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # to supress tf warnings
 import tensorflow as tf
@@ -31,7 +32,7 @@ script_args = get_script_args()
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
 MODEL_NAME: str = "10_subclassing_api"
-SAVED_MODEL_FILE: str = f"saved_models/best_{MODEL_NAME}_model.h5"
+SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
 SHOULD_TRAIN_MODEL: bool = script_args.train
 
 
@@ -145,16 +146,38 @@ class DeformationTrackerModel(keras.Model):
         self.hidden1 = keras.layers.SimpleRNN(15, return_sequences=True, input_shape=[None, 5])
         self.hidden2 = keras.layers.SimpleRNN(15, return_sequences=True)
         self.output_layer = keras.layers.Dense(2)
+        self.__use_teacher_forcing__ = True
 
-    # inputs = (UseTeacherForcing: bool, cp_input, finger_input)
+    def setTeacherForcing(self, useTeacherForcing: bool):
+        self.__use_teacher_forcing__ = useTeacherForcing
+
+    # inputs = (cp_input, finger_input)
     def call(self, model_input):
         control_point_input, finger_input = model_input
-        layer_input = tf.keras.layers.Concatenate()([control_point_input, finger_input])
-        hidden1 = self.hidden1(layer_input)
-        hidden2 = self.hidden2(hidden1)
-        model_output = self.output_layer(hidden2)
 
-        return model_output
+        if self.__use_teacher_forcing__: # With teacher forcing
+            print("Using teacher forcing")
+            layer_input = tf.keras.layers.Concatenate()([control_point_input, finger_input])
+            hidden1 = self.hidden1(layer_input)
+            hidden2 = self.hidden2(hidden1)
+            model_output = self.output_layer(hidden2)
+            return model_output
+
+        else: # No teacher forcing
+            print("Not using teacher forcing")
+            layer_output = control_point_input[:,:1,:] # first control point of the seq
+            layer_outputs=[]
+            for i in range(100):
+                next_layer_input = tf.keras.layers.Concatenate()([layer_output, finger_input[:,i:i+1,:]])# init layer input
+                hidden1 = self.hidden1(next_layer_input)
+                hidden2 = self.hidden2(hidden1)
+                layer_output = self.output_layer(hidden2)
+                layer_outputs.append(layer_output)
+            concat_func = lambda x, y: tf.keras.layers.Concatenate(axis=1)([x, y])
+            model_output = reduce(concat_func, layer_outputs)
+            return model_output
+
+        
 
 model = DeformationTrackerModel()
 
@@ -174,6 +197,19 @@ early_stopping_cb = keras.callbacks.EarlyStopping(patience=20, min_delta=0.0001)
 
 # TRAIN ------------------------------------------------------------------------
 if SHOULD_TRAIN_MODEL:
+    # history = model.fit(
+    #     [X_train_cp, X_train_finger],
+    #     y_train,
+    #     validation_data=(
+    #         [X_valid_cp, X_valid_finger],
+    #         y_valid,
+    #     ),
+    #     epochs=20,
+    #     callbacks=[tensorboard_cb],
+    # )
+
+    model.setTeacherForcing(False)
+
     history = model.fit(
         [X_train_cp, X_train_finger],
         y_train,
@@ -185,27 +221,21 @@ if SHOULD_TRAIN_MODEL:
         callbacks=[tensorboard_cb],
     )
 
-    save_best_model(model, SAVED_MODEL_FILE, [X_valid_cp, X_valid_finger], y_valid)
+    save_best_model(model, SAVED_MODEL_DIR, [X_valid_cp, X_valid_finger], y_valid)
 else:
     try:
-        model = keras.models.load_model(SAVED_MODEL_FILE)
+        model = keras.models.load_model(SAVED_MODEL_DIR)
         print("Using stored model.")
     except:
         sys.exit(
             "Error:  There is no model saved.\n\tTo use the flag --train, the model has to be trained before."
         )
 
-sys.exit()
-
-# MODEL WEIGHTS
-weights = model.get_weights()
-for layer_index, layer_weight in enumerate(weights):
-    print(f"Layer Param #{layer_index}: ", layer_weight.shape)
 
 # PREDICTION -------------------------------------------------------------------
 
 # ONE-STEP PREDICTION
-y_pred = model.predict(X_train[:47])
+y_pred = model.predict([X_train_center_sponge_cp, X_train_center_sponge_finger])
 predicted_polygons = y_pred.swapaxes(0,1)
 
 plotter.plot_npz_control_points(
@@ -214,8 +244,9 @@ plotter.plot_npz_control_points(
     plot_cb=finger_position_plot(norm_train_finger_positions),
 )
 
+
 # PREDICT ON VALIDATION SET
-y_pred = model.predict(X_valid[:])
+y_pred = model.predict([X_valid_cp, X_valid_finger])
 predicted_polygons = y_pred.swapaxes(0,1)
 
 plotter.plot_npz_control_points(
@@ -224,6 +255,8 @@ plotter.plot_npz_control_points(
     plot_cb=finger_position_plot(norm_valid_finger_positions),
 )
 
+
+sys.exit()
 
 # MULTIPLE-STEP PREDICTION
 cp_start_index=0 # from which control point start plotting

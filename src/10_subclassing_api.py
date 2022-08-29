@@ -1,7 +1,7 @@
 """
 In this experiment we will use the subclassing API from keras to build the model so it can do both, teacher and no-teacher forcing.
 
-This experiment is based on Experiment-08
+This experiment is based on Experiment-10
 
 Results: ?
 """
@@ -20,6 +20,7 @@ from read_data.finger_position_reader import read_finger_positions_file
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
 from utils.dataset_creation import create_teacher_forcing_dataset, mirror_data_x_axis
+from subclassing_models import DeformationTrackerModel
 import plots.dataset_plotter as plotter
 import utils.logs as util_logs
 import utils.normalization as normalization
@@ -139,45 +140,7 @@ X_valid_cp, X_valid_finger, y_valid = create_teacher_forcing_dataset(
 )
 
 
-# CREATE RECURRENT MODEL -------------------------------------------------------
-class DeformationTrackerModel(keras.Model):
-    def __init__(self, **kwargs):
-        super().__init__(kwargs)
-        self.hidden1 = keras.layers.SimpleRNN(15, return_sequences=True, input_shape=[None, 5])
-        self.hidden2 = keras.layers.SimpleRNN(15, return_sequences=True)
-        self.output_layer = keras.layers.Dense(2)
-        self.__use_teacher_forcing__ = True
-
-    def setTeacherForcing(self, useTeacherForcing: bool):
-        self.__use_teacher_forcing__ = useTeacherForcing
-
-    # inputs = (cp_input, finger_input)
-    def call(self, model_input):
-        control_point_input, finger_input = model_input
-
-        if self.__use_teacher_forcing__: # With teacher forcing
-            print("Using teacher forcing")
-            layer_input = tf.keras.layers.Concatenate()([control_point_input, finger_input])
-            hidden1 = self.hidden1(layer_input)
-            hidden2 = self.hidden2(hidden1)
-            model_output = self.output_layer(hidden2)
-            return model_output
-
-        else: # No teacher forcing
-            print("Not using teacher forcing")
-            layer_output = control_point_input[:,:1,:] # first control point of the seq
-            layer_outputs=[]
-            for i in range(100):
-                next_layer_input = tf.keras.layers.Concatenate()([layer_output, finger_input[:,i:i+1,:]])# init layer input
-                hidden1 = self.hidden1(next_layer_input)
-                hidden2 = self.hidden2(hidden1)
-                layer_output = self.output_layer(hidden2)
-                layer_outputs.append(layer_output)
-            concat_func = lambda x, y: tf.keras.layers.Concatenate(axis=1)([x, y])
-            model_output = reduce(concat_func, layer_outputs)
-            return model_output
-
-        
+# MODEL CREATION --------------------------------------------------------------
 
 model = DeformationTrackerModel()
 
@@ -197,19 +160,6 @@ early_stopping_cb = keras.callbacks.EarlyStopping(patience=20, min_delta=0.0001)
 
 # TRAIN ------------------------------------------------------------------------
 if SHOULD_TRAIN_MODEL:
-    # history = model.fit(
-    #     [X_train_cp, X_train_finger],
-    #     y_train,
-    #     validation_data=(
-    #         [X_valid_cp, X_valid_finger],
-    #         y_valid,
-    #     ),
-    #     epochs=20,
-    #     callbacks=[tensorboard_cb],
-    # )
-
-    model.setTeacherForcing(False)
-
     history = model.fit(
         [X_train_cp, X_train_finger],
         y_train,
@@ -217,14 +167,16 @@ if SHOULD_TRAIN_MODEL:
             [X_valid_cp, X_valid_finger],
             y_valid,
         ),
-        epochs=20,
+        epochs=6000,
         callbacks=[tensorboard_cb],
     )
 
     save_best_model(model, SAVED_MODEL_DIR, [X_valid_cp, X_valid_finger], y_valid)
 else:
     try:
-        model = keras.models.load_model(SAVED_MODEL_DIR)
+        prev_model = keras.models.load_model(SAVED_MODEL_DIR, custom_objects={"DeformationTrackerModel": DeformationTrackerModel})
+        model.predict([X_train_center_sponge_cp, X_train_center_sponge_finger]) #just to init model weights
+        model.set_weights(prev_model.get_weights())
         print("Using stored model.")
     except:
         sys.exit(
@@ -240,7 +192,7 @@ predicted_polygons = y_pred.swapaxes(0,1)
 
 plotter.plot_npz_control_points(
     predicted_polygons[1:],
-    title="One-Step Prediction On Train Set",
+    title="E10: One-Step Prediction On Train Set",
     plot_cb=finger_position_plot(norm_train_finger_positions),
 )
 
@@ -251,28 +203,29 @@ predicted_polygons = y_pred.swapaxes(0,1)
 
 plotter.plot_npz_control_points(
     predicted_polygons[1:],
-    title="One-Step Prediction On Validation Set",
+    title="E10: One-Step Prediction On Validation Set",
     plot_cb=finger_position_plot(norm_valid_finger_positions),
 )
 
 
-sys.exit()
-
 # MULTIPLE-STEP PREDICTION
-cp_start_index=0 # from which control point start plotting
-offstet=47 # how many control points after cp_start_index will be plotted
-to_predict = X_valid[cp_start_index:cp_start_index+offstet, :1, :]
-predictions = []
-for step in range(time_steps):
-    y_pred = model.predict(to_predict)
-    predictions.append(y_pred)
-    to_predict = np.append(y_pred,X_train[cp_start_index:cp_start_index+offstet, step:step+1, 2:],axis=2)
+model.setTeacherForcing(False)
 
-print(np.array(predictions).shape)
-predicted_polygons = np.array(predictions).reshape((100, offstet, 2))
+y_pred = model.predict([X_train_center_sponge_cp[:,:1,:], X_train_center_sponge_finger])
+predicted_polygons = y_pred.swapaxes(0,1)
 
 plotter.plot_npz_control_points(
-    predicted_polygons[:100],
-    title="Multiple-Step Prediction on Validation Set",
+    predicted_polygons[1:],
+    title="E10: Multiple-Step Prediction On Train Set",
+    plot_cb=finger_position_plot(norm_train_finger_positions),
+)
+
+# PREDICT ON VALIDATION SET
+y_pred = model.predict([X_valid_cp[:,:1,:], X_valid_finger])
+predicted_polygons = y_pred.swapaxes(0,1)
+
+plotter.plot_npz_control_points(
+    predicted_polygons[1:],
+    title="E10: Multiple-Step Prediction On Validation Set",
     plot_cb=finger_position_plot(norm_valid_finger_positions),
 )

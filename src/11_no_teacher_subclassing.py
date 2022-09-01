@@ -3,7 +3,7 @@ In this experiment we will use the subclassing API from keras to build the model
 
 This experiment is based on Experiment-08
 
-Results: ?
+Results: Best results so far, the control points stay on its place, but still has to follow the finger trayectory.
 """
 
 import os
@@ -31,9 +31,10 @@ script_args = get_script_args()
 
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
-MODEL_NAME: str = "11_no_teacher_subclassing"
+MODEL_NAME: str = "11_no_teacher_subclassing_24n"
 SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
-PREV_MODEL_DIR: str = "saved_models/best_10_subclassing_api"
+CHECKPOINT_MODEL_DIR: str = f"{SAVED_MODEL_DIR}/checkpoint/"
+PREV_MODEL_DIR: str = "saved_models/best_10_subclassing_api_24n"
 SHOULD_TRAIN_MODEL: bool = script_args.train
 
 
@@ -157,6 +158,14 @@ tensorboard_cb = keras.callbacks.TensorBoard(log_dir=log_name, histogram_freq=10
 # EARLY STOPPING
 early_stopping_cb = keras.callbacks.EarlyStopping(patience=20, min_delta=0.0001)
 
+# SAVE BEST CALLBACK
+checkpoint_cb = keras.callbacks.ModelCheckpoint(
+    filepath=CHECKPOINT_MODEL_DIR,
+    save_weights_only=True,
+    monitor='val_loss',
+    mode='min',
+    save_best_only=True
+)
 
 # TRAIN ------------------------------------------------------------------------
 if SHOULD_TRAIN_MODEL:
@@ -172,7 +181,7 @@ if SHOULD_TRAIN_MODEL:
             y_valid,
         ),
         epochs=6000,
-        callbacks=[tensorboard_cb],
+        callbacks=[tensorboard_cb, checkpoint_cb],
     )
 
     save_best_model(model, SAVED_MODEL_DIR, [X_valid_cp, X_valid_finger], y_valid)
@@ -180,9 +189,12 @@ else:
     try:
         prev_model = keras.models.load_model(SAVED_MODEL_DIR, custom_objects={"DeformationTrackerModel": DeformationTrackerModel})
         model.setTeacherForcing(True)
-        model.predict([X_train_center_sponge_cp, X_train_center_sponge_finger]) #just to init model weights
+        model.predict([X_train_center_sponge_cp[:,:1,:], X_train_center_sponge_finger[:,:1,:]]) #just to init model weights
         model.set_weights(prev_model.get_weights())
         print("Using stored model.")
+        model.setTeacherForcing(False)
+        print(f"Stored model train loss: {model.evaluate([X_train_cp[:,:1,:], X_train_finger],y_train)}")
+        print(f"Stored model valid loss: {model.evaluate([X_valid_cp[:,:1,:], X_valid_finger], y_valid)}")
     except:
         sys.exit(
             "Error:  There is no model saved.\n\tTo use the flag --train, the model has to be trained before."
@@ -218,9 +230,10 @@ model.setTeacherForcing(False)
 
 y_pred = model.predict([X_train_center_sponge_cp[:,:1,:], X_train_center_sponge_finger])
 predicted_polygons = y_pred.swapaxes(0,1)
+polygons_to_show = np.append(norm_train_polygons[:1], predicted_polygons[1:]).reshape(100,47,2)
 
 plotter.plot_npz_control_points(
-    predicted_polygons[1:],
+    polygons_to_show,
     title="E11: Multiple-Step Prediction On Train Set",
     plot_cb=finger_position_plot(norm_train_finger_positions),
 )
@@ -228,9 +241,10 @@ plotter.plot_npz_control_points(
 # PREDICT ON VALIDATION SET
 y_pred = model.predict([X_valid_cp[:,:1,:], X_valid_finger])
 predicted_polygons = y_pred.swapaxes(0,1)
+polygons_to_show = np.append(norm_valid_polygons[:1], predicted_polygons[1:]).reshape(100,47,2)
 
 plotter.plot_npz_control_points(
-    predicted_polygons[1:],
+    polygons_to_show,
     title="E11: Multiple-Step Prediction On Validation Set",
     plot_cb=finger_position_plot(norm_valid_finger_positions),
 )

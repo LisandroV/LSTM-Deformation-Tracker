@@ -6,8 +6,8 @@ from functools import reduce
 class DeformationTrackerModel(tf.keras.Model):
     def __init__(self, **kwargs):
         super().__init__(kwargs)
-        self.hidden1 = tf.keras.layers.SimpleRNN(15, return_sequences=True, input_shape=[None, 5], name="first_hidden", kernel_initializer='random_normal',bias_initializer='zeros')
-        self.hidden2 = tf.keras.layers.SimpleRNN(15, return_sequences=True, name="second_hidden", kernel_initializer='random_normal',bias_initializer='zeros')
+        self.hidden1 = tf.keras.layers.SimpleRNN(24, return_sequences=True, input_shape=[None, 5], name="first_hidden", kernel_initializer='random_normal',bias_initializer='zeros')
+        self.hidden2 = tf.keras.layers.SimpleRNN(24, return_sequences=True, name="second_hidden", kernel_initializer='random_normal',bias_initializer='zeros')
         self.output_layer = tf.keras.layers.Dense(2, name="dense_out", kernel_initializer='random_normal',bias_initializer='zeros')
         self.__use_teacher_forcing__ = True
 

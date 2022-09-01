@@ -32,7 +32,7 @@ script_args = get_script_args()
 
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
-MODEL_NAME: str = "10_subclassing_api"
+MODEL_NAME: str = "10_subclassing_api_24n"
 SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
 SHOULD_TRAIN_MODEL: bool = script_args.train
 
@@ -160,6 +160,7 @@ early_stopping_cb = keras.callbacks.EarlyStopping(patience=20, min_delta=0.0001)
 
 # TRAIN ------------------------------------------------------------------------
 if SHOULD_TRAIN_MODEL:
+    model.setTeacherForcing(True)
     history = model.fit(
         [X_train_cp, X_train_finger],
         y_train,
@@ -167,7 +168,7 @@ if SHOULD_TRAIN_MODEL:
             [X_valid_cp, X_valid_finger],
             y_valid,
         ),
-        epochs=6000,
+        epochs=10000,
         callbacks=[tensorboard_cb],
     )
 
@@ -178,6 +179,9 @@ else:
         model.predict([X_train_center_sponge_cp, X_train_center_sponge_finger]) #just to init model weights
         model.set_weights(prev_model.get_weights())
         print("Using stored model.")
+        model.setTeacherForcing(True)
+        print(f"Stored model train loss: {model.evaluate([X_train_cp, X_train_finger],y_train)}")
+        print(f"Stored model valid loss: {model.evaluate([X_valid_cp, X_valid_finger], y_valid)}")
     except:
         sys.exit(
             "Error:  There is no model saved.\n\tTo use the flag --train, the model has to be trained before."

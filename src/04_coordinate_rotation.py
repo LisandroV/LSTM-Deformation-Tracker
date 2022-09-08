@@ -129,7 +129,9 @@ model.compile(loss="mse", optimizer="adam")
 
 # SETUP TENSORBOARD LOGS -------------------------------------------------------
 log_name = util_logs.get_log_filename(MODEL_NAME)
-tensorboard_cb = keras.callbacks.TensorBoard(log_dir=log_name, histogram_freq=100, write_graph=True)
+tensorboard_cb = keras.callbacks.TensorBoard(
+    log_dir=log_name, histogram_freq=100, write_graph=True
+)
 
 
 # EARLY STOPPING

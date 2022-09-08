@@ -28,7 +28,7 @@ tf.random.set_seed(42)
 
 script_args = get_script_args()
 
-STEP_SIZE=10
+STEP_SIZE = 10
 
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
@@ -142,7 +142,7 @@ X_valid, y_valid = create_multiple_step_dataset(
 model = keras.models.Sequential(
     [
         keras.layers.SimpleRNN(94, return_sequences=True, input_shape=[None, 97]),
-        keras.layers.Dense(94*STEP_SIZE)
+        keras.layers.Dense(94 * STEP_SIZE),
     ]
 )
 
@@ -153,7 +153,9 @@ model.compile(loss="mse", optimizer="adam")
 
 # SETUP TENSORBOARD LOGS -------------------------------------------------------
 log_name = util_logs.get_log_filename(MODEL_NAME)
-tensorboard_cb = keras.callbacks.TensorBoard(log_dir=log_name, histogram_freq=100, write_graph=True)
+tensorboard_cb = keras.callbacks.TensorBoard(
+    log_dir=log_name, histogram_freq=100, write_graph=True
+)
 
 
 # EARLY STOPPING
@@ -206,7 +208,7 @@ else:
 
 # ONE-STEP PREDICTION
 y_pred = model.predict(X_train[:1])
-predicted_polygons = np.reshape(y_pred[:,:,:94], (90, 47, 2))
+predicted_polygons = np.reshape(y_pred[:, :, :94], (90, 47, 2))
 
 plotter.plot_npz_control_points(
     predicted_polygons[1:],
@@ -216,7 +218,7 @@ plotter.plot_npz_control_points(
 
 # PREDICT ON VALIDATION SET
 y_pred = model.predict(X_valid[:1])
-predicted_polygons = np.reshape(y_pred[:,:,:94], (90, 47, 2))
+predicted_polygons = np.reshape(y_pred[:, :, :94], (90, 47, 2))
 
 plotter.plot_npz_control_points(
     predicted_polygons[1:],

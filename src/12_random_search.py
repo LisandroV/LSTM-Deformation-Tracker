@@ -11,6 +11,7 @@ import sys
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # to supress tf warnings
 import tensorflow as tf
 from tensorflow import keras
+import keras_tuner
 
 from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
@@ -30,6 +31,7 @@ script_args = get_script_args()
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
 MODEL_NAME: str = "12_random_search"
+SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
 PREV_MODEL_DIR: str = "saved_models/best_11_no_teacher_subclassing_24n"
 CHECKPOINT_MODEL_DIR: str = f"{PREV_MODEL_DIR}/checkpoint/"
 SHOULD_TRAIN_MODEL: bool = script_args.train
@@ -120,11 +122,19 @@ mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_ax
 #     plot_cb=finger_position_plot(mirrored_finger_positions),
 # )
 
-X_train_mirror_cp, X_train_mirror_finger, y_train_mirror = create_teacher_forcing_dataset(
+(
+    X_train_mirror_cp,
+    X_train_mirror_finger,
+    y_train_mirror,
+) = create_teacher_forcing_dataset(
     mirrored_polygons, mirrored_finger_positions, mirrored_forces
 )
 
-X_train_center_sponge_cp, X_train_center_sponge_finger, y_train_center_sponge = create_teacher_forcing_dataset(
+(
+    X_train_center_sponge_cp,
+    X_train_center_sponge_finger,
+    y_train_center_sponge,
+) = create_teacher_forcing_dataset(
     norm_train_polygons, norm_train_finger_positions, norm_train_forces
 )
 
@@ -137,59 +147,106 @@ X_valid_cp, X_valid_finger, y_valid = create_teacher_forcing_dataset(
     norm_valid_polygons, norm_valid_finger_positions, norm_valid_forces
 )
 
-        
-
-model = DeformationTrackerModel()
-
-# print(model.summary())
-
-model.compile(loss="mse", optimizer="adam")
-model.setTeacherForcing(False)
-
 
 # SETUP TENSORBOARD LOGS -------------------------------------------------------
 log_name = util_logs.get_log_filename(MODEL_NAME)
-tensorboard_cb = keras.callbacks.TensorBoard(log_dir=log_name, histogram_freq=100, write_graph=True)
+tensorboard_cb = keras.callbacks.TensorBoard(
+    log_dir=log_name, histogram_freq=100, write_graph=True
+)
 
 
-try:
-    prev_model = keras.models.load_model(PREV_MODEL_DIR, custom_objects={"DeformationTrackerModel": DeformationTrackerModel})
+def load_model() -> DeformationTrackerModel:
+    model = DeformationTrackerModel()
     model.setTeacherForcing(True)
-    model.predict([X_train_center_sponge_cp[:,:1,:], X_train_center_sponge_finger[:,:1,:]]) #just to init model weights
-    # model.set_weights(prev_model.get_weights()) # to use last model
-    model.load_weights(CHECKPOINT_MODEL_DIR) #to use checkpoint
-    print("Using stored model.")
+    model.build(input_shape=[(None, 100, 2), (None, 100, 3)])  # init model weights
+    # model.compile(loss="mse", optimizer="adam")
     model.setTeacherForcing(False)
-    print(f"Stored model train loss: {model.evaluate([X_train_cp[:,:1,:], X_train_finger],y_train)}")
-    print(f"Stored model valid loss: {model.evaluate([X_valid_cp[:,:1,:], X_valid_finger], y_valid)}")
-except:
-    sys.exit(
-        "Error:  There is no model saved.\n\tTo use the flag --train, the model has to be trained before."
+    prev_model = keras.models.load_model(
+        PREV_MODEL_DIR,
+        custom_objects={"DeformationTrackerModel": DeformationTrackerModel},
     )
+    # model.set_weights(prev_model.get_weights()) # to use last model of previous training
+    model.load_weights(CHECKPOINT_MODEL_DIR)  # to use best model of previous training
+    print("Using stored model.")
+
+    return model
+
+
+def build_model(hp):
+    model: DeformationTrackerModel = load_model()
+    learning_rate = hp.Float("lr", min_value=1e-4, max_value=2e-2, sampling="log")
+    epsilon = hp.Float("epsilon", min_value=1e-7, max_value=1e-5, sampling="log")
+    model.setTeacherForcing(False)
+    model.compile(
+        optimizer=keras.optimizers.Adam(learning_rate=learning_rate, epsilon=epsilon),
+        loss="mse",
+    )
+
+    return model
+
+
+tuner = keras_tuner.RandomSearch(
+    hypermodel=build_model,
+    objective="val_loss",
+    max_trials=20,
+    executions_per_trial=1,
+    overwrite=True,
+    directory="saved_models/random_search",
+    project_name="first_test",
+)
+tuner.search_space_summary()
+
+tuner.search(
+    [X_train_cp[:, :1, :], X_train_finger],
+    y_train,
+    epochs=4000,
+    validation_data=(
+        [X_valid_cp, X_valid_finger],
+        y_valid,
+    ),
+    callbacks=[tensorboard_cb],
+)
+
+
+tuner.results_summary()
+# Get the top 2 hyperparameters.
+best_hps = tuner.get_best_hyperparameters(2)
+# TODO CONTINUE: fix model saving
+# Build the model with the best hp.
+# model = build_model(best_hps[0])
+# model.setTeacherForcing(False)
+# y_pred = model.predict([X_train_center_sponge_cp[:,:1,:], X_train_center_sponge_finger])
+# print("pred DONE")
+
+models = tuner.get_best_models(num_models=2)
+best_model = models[0]
+# Build the model.
+# Needed for `Sequential` without specified `input_shape`.
+best_model.build(input_shape=(None, 28, 28))
 
 
 # PREDICTION -------------------------------------------------------------------
 
-# MULTIPLE-STEP PREDICTION
-model.setTeacherForcing(False)
+# # MULTIPLE-STEP PREDICTION
+# model.setTeacherForcing(False)
 
-y_pred = model.predict([X_train_center_sponge_cp[:,:1,:], X_train_center_sponge_finger])
-predicted_polygons = y_pred.swapaxes(0,1)
-polygons_to_show = np.append(norm_train_polygons[:1], predicted_polygons[1:]).reshape(100,47,2)
+# y_pred = model.predict([X_train_center_sponge_cp[:,:1,:], X_train_center_sponge_finger])
+# predicted_polygons = y_pred.swapaxes(0,1)
+# polygons_to_show = np.append(norm_train_polygons[:1], predicted_polygons[1:]).reshape(100,47,2)
 
-plotter.plot_npz_control_points(
-    polygons_to_show,
-    title="E12: Multiple-Step Prediction On Train Set",
-    plot_cb=finger_position_plot(norm_train_finger_positions),
-)
+# plotter.plot_npz_control_points(
+#     polygons_to_show,
+#     title="E12: Multiple-Step Prediction On Train Set",
+#     plot_cb=finger_position_plot(norm_train_finger_positions),
+# )
 
-# PREDICT ON VALIDATION SET
-y_pred = model.predict([X_valid_cp[:,:1,:], X_valid_finger])
-predicted_polygons = y_pred.swapaxes(0,1)
-polygons_to_show = np.append(norm_valid_polygons[:1], predicted_polygons[1:]).reshape(100,47,2)
+# # PREDICT ON VALIDATION SET
+# y_pred = model.predict([X_valid_cp[:,:1,:], X_valid_finger])
+# predicted_polygons = y_pred.swapaxes(0,1)
+# polygons_to_show = np.append(norm_valid_polygons[:1], predicted_polygons[1:]).reshape(100,47,2)
 
-plotter.plot_npz_control_points(
-    polygons_to_show,
-    title="E12: Multiple-Step Prediction On Validation Set",
-    plot_cb=finger_position_plot(norm_valid_finger_positions),
-)
+# plotter.plot_npz_control_points(
+#     polygons_to_show,
+#     title="E12: Multiple-Step Prediction On Validation Set",
+#     plot_cb=finger_position_plot(norm_valid_finger_positions),
+# )

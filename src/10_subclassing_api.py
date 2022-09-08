@@ -122,11 +122,19 @@ mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_ax
 #     plot_cb=finger_position_plot(mirrored_finger_positions),
 # )
 
-X_train_mirror_cp, X_train_mirror_finger, y_train_mirror = create_teacher_forcing_dataset(
+(
+    X_train_mirror_cp,
+    X_train_mirror_finger,
+    y_train_mirror,
+) = create_teacher_forcing_dataset(
     mirrored_polygons, mirrored_finger_positions, mirrored_forces
 )
 
-X_train_center_sponge_cp, X_train_center_sponge_finger, y_train_center_sponge = create_teacher_forcing_dataset(
+(
+    X_train_center_sponge_cp,
+    X_train_center_sponge_finger,
+    y_train_center_sponge,
+) = create_teacher_forcing_dataset(
     norm_train_polygons, norm_train_finger_positions, norm_train_forces
 )
 
@@ -151,7 +159,9 @@ model.compile(loss="mse", optimizer="adam")
 
 # SETUP TENSORBOARD LOGS -------------------------------------------------------
 log_name = util_logs.get_log_filename(MODEL_NAME)
-tensorboard_cb = keras.callbacks.TensorBoard(log_dir=log_name, histogram_freq=100, write_graph=True)
+tensorboard_cb = keras.callbacks.TensorBoard(
+    log_dir=log_name, histogram_freq=100, write_graph=True
+)
 
 
 # EARLY STOPPING
@@ -175,13 +185,22 @@ if SHOULD_TRAIN_MODEL:
     save_best_model(model, SAVED_MODEL_DIR, [X_valid_cp, X_valid_finger], y_valid)
 else:
     try:
-        prev_model = keras.models.load_model(SAVED_MODEL_DIR, custom_objects={"DeformationTrackerModel": DeformationTrackerModel})
-        model.predict([X_train_center_sponge_cp, X_train_center_sponge_finger]) #just to init model weights
+        prev_model = keras.models.load_model(
+            SAVED_MODEL_DIR,
+            custom_objects={"DeformationTrackerModel": DeformationTrackerModel},
+        )
+        model.build(
+            input_shape=[(None, 100, 2), (None, 100, 3)]
+        )  # just to init model weights
         model.set_weights(prev_model.get_weights())
         print("Using stored model.")
         model.setTeacherForcing(True)
-        print(f"Stored model train loss: {model.evaluate([X_train_cp, X_train_finger],y_train)}")
-        print(f"Stored model valid loss: {model.evaluate([X_valid_cp, X_valid_finger], y_valid)}")
+        print(
+            f"Stored model train loss: {model.evaluate([X_train_cp, X_train_finger],y_train)}"
+        )
+        print(
+            f"Stored model valid loss: {model.evaluate([X_valid_cp, X_valid_finger], y_valid)}"
+        )
     except:
         sys.exit(
             "Error:  There is no model saved.\n\tTo use the flag --train, the model has to be trained before."
@@ -192,7 +211,7 @@ else:
 
 # ONE-STEP PREDICTION
 y_pred = model.predict([X_train_center_sponge_cp, X_train_center_sponge_finger])
-predicted_polygons = y_pred.swapaxes(0,1)
+predicted_polygons = y_pred.swapaxes(0, 1)
 
 plotter.plot_npz_control_points(
     predicted_polygons[1:],
@@ -203,7 +222,7 @@ plotter.plot_npz_control_points(
 
 # PREDICT ON VALIDATION SET
 y_pred = model.predict([X_valid_cp, X_valid_finger])
-predicted_polygons = y_pred.swapaxes(0,1)
+predicted_polygons = y_pred.swapaxes(0, 1)
 
 plotter.plot_npz_control_points(
     predicted_polygons[1:],
@@ -215,8 +234,10 @@ plotter.plot_npz_control_points(
 # MULTIPLE-STEP PREDICTION
 model.setTeacherForcing(False)
 
-y_pred = model.predict([X_train_center_sponge_cp[:,:1,:], X_train_center_sponge_finger])
-predicted_polygons = y_pred.swapaxes(0,1)
+y_pred = model.predict(
+    [X_train_center_sponge_cp[:, :1, :], X_train_center_sponge_finger]
+)
+predicted_polygons = y_pred.swapaxes(0, 1)
 
 plotter.plot_npz_control_points(
     predicted_polygons[1:],
@@ -225,8 +246,8 @@ plotter.plot_npz_control_points(
 )
 
 # PREDICT ON VALIDATION SET
-y_pred = model.predict([X_valid_cp[:,:1,:], X_valid_finger])
-predicted_polygons = y_pred.swapaxes(0,1)
+y_pred = model.predict([X_valid_cp[:, :1, :], X_valid_finger])
+predicted_polygons = y_pred.swapaxes(0, 1)
 
 plotter.plot_npz_control_points(
     predicted_polygons[1:],

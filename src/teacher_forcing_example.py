@@ -1,6 +1,6 @@
-#show diagrams:
-#https://towardsdatascience.com/how-to-implement-seq2seq-lstm-model-in-keras-shortcutnlp-6f355f3e5639
-#https://medium.com/deep-learning-with-keras/seq2seq-part-d-encoder-decoder-with-teacher-forcing-18a3a09a096
+# show diagrams:
+# https://towardsdatascience.com/how-to-implement-seq2seq-lstm-model-in-keras-shortcutnlp-6f355f3e5639
+# https://medium.com/deep-learning-with-keras/seq2seq-part-d-encoder-decoder-with-teacher-forcing-18a3a09a096
 
 import numpy as np
 import tensorflow as tf
@@ -14,7 +14,6 @@ num_neurons = 256  # Latent dimensionality of the encoding space.
 num_samples = 10000  # Number of samples to train on.
 # Path to the data txt file on disk.
 data_path = "fra.txt"
-
 
 
 # ------------------------------------------------------------------ Prepare the Data
@@ -81,8 +80,6 @@ for i, (input_text, target_text) in enumerate(zip(input_texts, target_texts)):
     decoder_target_data[i, t:, target_token_index[" "]] = 1.0
 
 
-
-
 # ------------------------------------------------------------------- Build the model
 
 # Define an input sequence and process it.
@@ -107,7 +104,6 @@ decoder_outputs = decoder_dense(decoder_outputs)
 # Define the model that will turn
 # `encoder_input_data` & `decoder_input_data` into `decoder_target_data`
 model = keras.Model([encoder_inputs, decoder_inputs], decoder_outputs)
-
 
 
 # ------------------------------------------------------------------------- Train the model
@@ -191,7 +187,6 @@ def decode_sequence(input_seq):
         # Update states
         states_value = [h, c]
     return decoded_sentence
-
 
 
 # ----------------------------------------------------- You can now generate decoded sentences as such:

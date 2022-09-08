@@ -84,81 +84,102 @@ def create_rotating_coordinates_dataset(
 
     return np.array(X_data), np.array(y_data)
 
+
 def mirror_data_x_axis(
     polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray
 ):
     """
     Apply a transformation on the polygon and finger position
     """
-    mirrored_polygons  = polygons.copy()
-    mirrored_finger_positions  = finger_positions.copy()
+    mirrored_polygons = polygons.copy()
+    mirrored_finger_positions = finger_positions.copy()
 
-    mirrored_polygons[:,:,0] *= -1
-    mirrored_finger_positions[:,0] *= -1
+    mirrored_polygons[:, :, 0] *= -1
+    mirrored_finger_positions[:, 0] *= -1
 
     return mirrored_polygons, mirrored_finger_positions, finger_force
 
+
 def create_multiple_step_dataset(
-    polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray, step_size: int=10
+    polygons: np.ndarray,
+    finger_positions: np.ndarray,
+    finger_force: np.ndarray,
+    step_size: int = 10,
 ):
     X_data, y_data = create_dataset(polygons, finger_positions, finger_force)
     y_step_data = []
     for i in range(polygons.shape[0] - step_size):
-        y_step_data.append(y_data[0,i:i+step_size].reshape(-1))
-    return X_data[:,:-step_size], np.array([y_step_data])
+        y_step_data.append(y_data[0, i : i + step_size].reshape(-1))
+    return X_data[:, :-step_size], np.array([y_step_data])
 
-def create_single_control_point_dataset(polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray):
+
+def create_single_control_point_dataset(
+    polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray
+):
     """
     every sequence contains only the coordinates for a single control point along with the finger force and position.
     """
     # create X_data
-    X_data = [] # shape: (47, 100, 5)
+    X_data = []  # shape: (47, 100, 5)
     for contol_point_index in range(polygons.shape[1]):
-        control_point_sequece = np.append(polygons[:,contol_point_index,:], finger_positions, axis=1)
-        control_point_sequece = np.append(control_point_sequece, finger_force.reshape(100,1), axis=1)
+        control_point_sequece = np.append(
+            polygons[:, contol_point_index, :], finger_positions, axis=1
+        )
+        control_point_sequece = np.append(
+            control_point_sequece, finger_force.reshape(100, 1), axis=1
+        )
         X_data.append(control_point_sequece)
 
     # create y_data
-    y_data = np.zeros((47,100,2))
+    y_data = np.zeros((47, 100, 2))
     for contol_point_index in range(polygons.shape[1]):
-        control_point_sequece = polygons[:,contol_point_index,:]
-        y_data[contol_point_index,:-1] = control_point_sequece[1:]
-        y_data[contol_point_index,-1] = control_point_sequece[-1]
-        
+        control_point_sequece = polygons[:, contol_point_index, :]
+        y_data[contol_point_index, :-1] = control_point_sequece[1:]
+        y_data[contol_point_index, -1] = control_point_sequece[-1]
+
     return np.array(X_data), y_data
 
+
 # plygons shape: (100, 47, 2)
-def create_teacher_forcing_dataset(polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray):
+def create_teacher_forcing_dataset(
+    polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray
+):
     """
     This is basically a copy of create_ single_control_point_dataset,
     but it creates two inputs, one for control points, and the other for the finger data
     """
     # create X_data
-    X_control_points = polygons.swapaxes(0,1) # shape: (47, 100, 2)
-    X_finger_data = np.array([np.append(finger_positions, finger_force.reshape(100,1), axis=1)]*47) # shape (47,100,3)
+    X_control_points = polygons.swapaxes(0, 1)  # shape: (47, 100, 2)
+    X_finger_data = np.array(
+        [np.append(finger_positions, finger_force.reshape(100, 1), axis=1)] * 47
+    )  # shape (47,100,3)
 
     # create y_data, shape: (47,100,2)
-    y_data = np.zeros((47,100,2))
+    y_data = np.zeros((47, 100, 2))
     for contol_point_index in range(polygons.shape[1]):
-        control_point_sequece = polygons[:,contol_point_index,:]
-        y_data[contol_point_index,:-1] = control_point_sequece[1:]
-        y_data[contol_point_index,-1] = control_point_sequece[-1]
-        
+        control_point_sequece = polygons[:, contol_point_index, :]
+        y_data[contol_point_index, :-1] = control_point_sequece[1:]
+        y_data[contol_point_index, -1] = control_point_sequece[-1]
+
     return X_control_points, X_finger_data, y_data
 
-def create_no_teacher_forcing_dataset(polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray):
-    """
-    """
-    X_first_control_points = polygons[0] # shape: (47,2)
+
+def create_no_teacher_forcing_dataset(
+    polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray
+):
+    """ """
+    X_first_control_points = polygons[0]  # shape: (47,2)
 
     # copy of the finger data sequence for every control point
-    X_finger_data = [np.append(finger_positions, finger_force.reshape(100,1), axis=1)]*47 # shape (47,100,3)
+    X_finger_data = [
+        np.append(finger_positions, finger_force.reshape(100, 1), axis=1)
+    ] * 47  # shape (47,100,3)
 
     # create y_data, cp expected sequence
-    y_data = np.zeros((47,100,2))
+    y_data = np.zeros((47, 100, 2))
     for contol_point_index in range(polygons.shape[1]):
-        control_point_sequece = polygons[:,contol_point_index,:]
-        y_data[contol_point_index,:-1] = control_point_sequece[1:]
-        y_data[contol_point_index,-1] = control_point_sequece[-1]
-    
+        control_point_sequece = polygons[:, contol_point_index, :]
+        y_data[contol_point_index, :-1] = control_point_sequece[1:]
+        y_data[contol_point_index, -1] = control_point_sequece[-1]
+
     return X_first_control_points, np.array(X_finger_data), y_data

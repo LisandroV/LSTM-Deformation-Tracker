@@ -19,7 +19,10 @@ from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
-from utils.dataset_creation import create_single_control_point_dataset, mirror_data_x_axis
+from utils.dataset_creation import (
+    create_single_control_point_dataset,
+    mirror_data_x_axis,
+)
 import plots.dataset_plotter as plotter
 import utils.logs as util_logs
 import utils.normalization as normalization
@@ -143,7 +146,7 @@ model = keras.models.Sequential(
     [
         keras.layers.SimpleRNN(15, return_sequences=True, input_shape=[None, 5]),
         keras.layers.SimpleRNN(15, return_sequences=True),
-        keras.layers.Dense(2)
+        keras.layers.Dense(2),
     ]
 )
 
@@ -154,7 +157,9 @@ model.compile(loss="mse", optimizer="adam")
 
 # SETUP TENSORBOARD LOGS -------------------------------------------------------
 log_name = util_logs.get_log_filename(MODEL_NAME)
-tensorboard_cb = keras.callbacks.TensorBoard(log_dir=log_name, histogram_freq=100, write_graph=True)
+tensorboard_cb = keras.callbacks.TensorBoard(
+    log_dir=log_name, histogram_freq=100, write_graph=True
+)
 
 
 # EARLY STOPPING
@@ -194,7 +199,7 @@ for layer_index, layer_weight in enumerate(weights):
 
 # ONE-STEP PREDICTION
 y_pred = model.predict(X_train[:47])
-predicted_polygons = y_pred.swapaxes(0,1)
+predicted_polygons = y_pred.swapaxes(0, 1)
 
 plotter.plot_npz_control_points(
     predicted_polygons[1:],
@@ -204,7 +209,7 @@ plotter.plot_npz_control_points(
 
 # PREDICT ON VALIDATION SET
 y_pred = model.predict(X_valid[:])
-predicted_polygons = y_pred.swapaxes(0,1)
+predicted_polygons = y_pred.swapaxes(0, 1)
 
 plotter.plot_npz_control_points(
     predicted_polygons[1:],
@@ -214,14 +219,18 @@ plotter.plot_npz_control_points(
 
 
 # MULTIPLE-STEP PREDICTION
-cp_start_index=0 # from which control point start plotting
-offstet=47 # how many control points after cp_start_index will be plotted
-to_predict = X_valid[cp_start_index:cp_start_index+offstet, :1, :]
+cp_start_index = 0  # from which control point start plotting
+offstet = 47  # how many control points after cp_start_index will be plotted
+to_predict = X_valid[cp_start_index : cp_start_index + offstet, :1, :]
 predictions = []
 for step in range(time_steps):
     y_pred = model.predict(to_predict)
     predictions.append(y_pred)
-    to_predict = np.append(y_pred,X_train[cp_start_index:cp_start_index+offstet, step:step+1, 2:],axis=2)
+    to_predict = np.append(
+        y_pred,
+        X_train[cp_start_index : cp_start_index + offstet, step : step + 1, 2:],
+        axis=2,
+    )
 
 print(np.array(predictions).shape)
 predicted_polygons = np.array(predictions).reshape((100, offstet, 2))

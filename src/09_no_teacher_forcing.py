@@ -130,11 +130,19 @@ mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_ax
 #     plot_cb=finger_position_plot(mirrored_finger_positions),
 # )
 
-X_train_mirror_cps, X_train_mirror_finger, y_train_mirror = create_no_teacher_forcing_dataset(
+(
+    X_train_mirror_cps,
+    X_train_mirror_finger,
+    y_train_mirror,
+) = create_no_teacher_forcing_dataset(
     mirrored_polygons, mirrored_finger_positions, mirrored_forces
 )
 
-X_train_center_sponge_cps, X_train_center_sponge_finger, y_train_center_sponge = create_no_teacher_forcing_dataset(
+(
+    X_train_center_sponge_cps,
+    X_train_center_sponge_finger,
+    y_train_center_sponge,
+) = create_no_teacher_forcing_dataset(
     norm_train_polygons, norm_train_finger_positions, norm_train_forces
 )
 
@@ -153,7 +161,7 @@ X_valid_cps, X_valid_finger, y_valid = create_no_teacher_forcing_dataset(
 # guide: https://www.anycodings.com/1questions/1481759/setting-the-initial-state-of-an-rnn-represented-as-a-keras-sequential-model
 
 cp_initial_state = keras.Input((2,), name="FirstControlPointInput")
-finger_seq_input = keras.Input((None,3), name="FingerInput")
+finger_seq_input = keras.Input((None, 3), name="FingerInput")
 
 rnn_1 = keras.layers.SimpleRNN(15, return_sequences=True)
 layer_1 = rnn_1(finger_seq_input)
@@ -173,7 +181,9 @@ print(model.summary())
 
 # SETUP TENSORBOARD LOGS -------------------------------------------------------
 log_name = util_logs.get_log_filename(MODEL_NAME)
-tensorboard_cb = keras.callbacks.TensorBoard(log_dir=log_name, histogram_freq=100, write_graph=True)
+tensorboard_cb = keras.callbacks.TensorBoard(
+    log_dir=log_name, histogram_freq=100, write_graph=True
+)
 
 
 # EARLY STOPPING
@@ -213,9 +223,11 @@ for layer_index, layer_weight in enumerate(weights):
 
 # MULTIPLE-STEP PREDICTION ON TRAIN
 y_pred = model.predict([X_train_center_sponge_cps] + [X_train_center_sponge_finger])
-predicted_polygons = y_pred.swapaxes(0,1)
+predicted_polygons = y_pred.swapaxes(0, 1)
 
-polygons_to_show = np.append(norm_train_polygons[:1], predicted_polygons[1:]).reshape(100,47,2)
+polygons_to_show = np.append(norm_train_polygons[:1], predicted_polygons[1:]).reshape(
+    100, 47, 2
+)
 
 plotter.plot_npz_control_points(
     polygons_to_show,
@@ -225,9 +237,11 @@ plotter.plot_npz_control_points(
 
 # MULTIPLE-STEP PREDICTION ON VALIDATION
 y_pred = model.predict([X_valid_cps] + [X_valid_finger])
-predicted_polygons = y_pred.swapaxes(0,1)
+predicted_polygons = y_pred.swapaxes(0, 1)
 
-polygons_to_show = np.append(norm_valid_polygons[:1], predicted_polygons[1:]).reshape(100,47,2)
+polygons_to_show = np.append(norm_valid_polygons[:1], predicted_polygons[1:]).reshape(
+    100, 47, 2
+)
 
 plotter.plot_npz_control_points(
     polygons_to_show,

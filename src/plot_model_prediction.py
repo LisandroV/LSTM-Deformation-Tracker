@@ -1,8 +1,7 @@
 """
-Data augmentation by mirroring data
-The model is trained with sponge_center and the mirrored data of sponge_longside. 
+The only purpose of this file is to see the performance of the trained models.
 
-Results: Amazing results on one-step prediction on validation set.
+Results: -
 """
 
 import os
@@ -17,13 +16,11 @@ from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
-from utils.dataset_creation import (
-    create_rotating_coordinates_dataset,
-    mirror_data_x_axis,
-)
+from utils.dataset_creation import create_teacher_forcing_dataset, mirror_data_x_axis
 import plots.dataset_plotter as plotter
 import utils.logs as util_logs
 import utils.normalization as normalization
+from subclassing_models import DeformationTrackerModel
 
 np.random.seed(42)
 tf.random.set_seed(42)
@@ -32,8 +29,7 @@ script_args = get_script_args()
 
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
-MODEL_NAME: str = "05_mirror_data"
-SAVED_MODEL_FILE: str = f"saved_models/best_{MODEL_NAME}_model.h5"
+STORED_MODEL_DIR: str = "saved_models/best_11_no_teacher_subclassing_24n"
 SHOULD_TRAIN_MODEL: bool = script_args.train
 
 
@@ -94,21 +90,21 @@ finger_position_plot = lambda positions: lambda ax: ax.scatter(
     range(time_steps), positions[:, 0], positions[:, 1], s=10
 )
 
-plotter.plot_npz_control_points(
-    norm_train_polygons,
-    title="Normalized Training Control Points",
-    plot_cb=finger_position_plot(norm_train_finger_positions),
-)
+# plotter.plot_npz_control_points(
+#     norm_train_polygons,
+#     title="Normalized Training Control Points",
+#     plot_cb=finger_position_plot(norm_train_finger_positions),
+# )
 
-plotter.plot_npz_control_points(
-    norm_valid_polygons,
-    title="Normalized Validation Control Points",
-    plot_cb=finger_position_plot(norm_valid_finger_positions),
-)
+# plotter.plot_npz_control_points(
+#     norm_valid_polygons,
+#     title="Normalized Validation Control Points",
+#     plot_cb=finger_position_plot(norm_valid_finger_positions),
+# )
 
-plotter.plot_finger_force(norm_train_forces, title="Normalized Training Finger Force")
+# plotter.plot_finger_force(norm_train_forces, title="Normalized Training Finger Force")
 
-plotter.plot_finger_force(norm_valid_forces, title="Normalized Validation Finger Force")
+# plotter.plot_finger_force(norm_valid_forces, title="Normalized Validation Finger Force")
 
 
 # CREATE DATASET ---------------------------------------------------------------
@@ -116,111 +112,96 @@ mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_ax
     norm_valid_polygons, norm_valid_finger_positions, norm_valid_forces
 )
 
-plotter.plot_npz_control_points(
-    mirrored_polygons,
-    title="Mirrored Data for training",
-    plot_cb=finger_position_plot(mirrored_finger_positions),
-)
+# plotter.plot_npz_control_points(
+#     mirrored_polygons,
+#     title="Mirrored Data for training",
+#     plot_cb=finger_position_plot(mirrored_finger_positions),
+# )
 
-X_train_mirror, y_train_mirror = create_rotating_coordinates_dataset(
+(
+    X_train_mirror_cp,
+    X_train_mirror_finger,
+    y_train_mirror,
+) = create_teacher_forcing_dataset(
     mirrored_polygons, mirrored_finger_positions, mirrored_forces
 )
 
-X_train_center_sponge, y_train_center_sponge = create_rotating_coordinates_dataset(
+(
+    X_train_center_sponge_cp,
+    X_train_center_sponge_finger,
+    y_train_center_sponge,
+) = create_teacher_forcing_dataset(
     norm_train_polygons, norm_train_finger_positions, norm_train_forces
 )
 
 # Data augmentation
-X_train = np.concatenate((X_train_center_sponge, X_train_mirror))
+X_train_cp = np.concatenate((X_train_center_sponge_cp, X_train_mirror_cp))
+X_train_finger = np.concatenate((X_train_center_sponge_finger, X_train_mirror_finger))
 y_train = np.concatenate((y_train_center_sponge, y_train_mirror))
 
-X_valid, y_valid = create_rotating_coordinates_dataset(
+X_valid_cp, X_valid_finger, y_valid = create_teacher_forcing_dataset(
     norm_valid_polygons, norm_valid_finger_positions, norm_valid_forces
 )
 
-# CREATE RECURRENT MODEL -------------------------------------------------------
-model = keras.models.Sequential(
-    [
-        keras.layers.SimpleRNN(94, return_sequences=True, input_shape=[None, 97]),
-    ]
-)
 
-print(model.summary())
+model = DeformationTrackerModel()
+
+# print(model.summary())
 
 model.compile(loss="mse", optimizer="adam")
+model.setTeacherForcing(False)
 
-
-# SETUP TENSORBOARD LOGS -------------------------------------------------------
-log_name = util_logs.get_log_filename(MODEL_NAME)
-tensorboard_cb = keras.callbacks.TensorBoard(
-    log_dir=log_name, histogram_freq=100, write_graph=True
-)
-
-
-# EARLY STOPPING
-early_stopping_cb = keras.callbacks.EarlyStopping(patience=20, min_delta=0.0001)
-
-
-# TRAIN ------------------------------------------------------------------------
-if SHOULD_TRAIN_MODEL:
-    history = model.fit(
-        X_train,
-        y_train,
-        validation_data=(
-            X_valid,
-            y_valid,
-        ),
-        epochs=2000,
-        callbacks=[tensorboard_cb],
+try:
+    prev_model = keras.models.load_model(
+        STORED_MODEL_DIR,
+        custom_objects={"DeformationTrackerModel": DeformationTrackerModel},
     )
-
-    save_best_model(model, SAVED_MODEL_FILE, X_valid, y_valid)
-else:
-    try:
-        model = keras.models.load_model(SAVED_MODEL_FILE)
-        print("Using stored model.")
-    except:
-        sys.exit(
-            "Error:  There is no model saved.\n\tTo use the flag --train, the model has to be trained before."
-        )
+    model.setTeacherForcing(True)
+    model.build(input_shape=[(None, 100, 2), (None, 100, 3)])  # init model weights
+    model.set_weights(prev_model.get_weights())  # to use last model
+    # model.load_weights(CHECKPOINT_MODEL_DIR) #to use checkpoint
+    print("Using stored model.")
+    model.setTeacherForcing(False)
+    print(
+        f"Stored model train loss: {model.evaluate([X_train_cp[:,:1,:], X_train_finger],y_train)}"
+    )
+    print(
+        f"Stored model valid loss: {model.evaluate([X_valid_cp[:,:1,:], X_valid_finger], y_valid)}"
+    )
+except:
+    sys.exit(
+        "Error:  There is no model saved.\n\tTo use the flag --train, the model has to be trained before."
+    )
 
 
 # PREDICTION -------------------------------------------------------------------
 
 # MULTIPLE-STEP PREDICTION
-to_predict = X_train[:1, :1, :]
-predictions = []
-for step in range(time_steps):
-    y_pred = model.predict(to_predict)
-    to_predict = np.append(
-        np.append(y_pred.reshape(94), norm_train_finger_positions[step]),
-        [norm_train_forces[step]],
-    ).reshape(1, 1, 97)
-    predictions.append(np.reshape(y_pred, -1))
-predicted_polygons = np.reshape(np.array(predictions), (100, 47, 2))
+model.setTeacherForcing(False)
 
-plotter.plot_npz_control_points(
-    predicted_polygons[1:],
-    title="Multiple-Step Prediction",
-    plot_cb=finger_position_plot(norm_train_finger_positions),
+y_pred = model.predict(
+    [X_train_center_sponge_cp[:, :1, :], X_train_center_sponge_finger]
+)
+predicted_polygons = y_pred.swapaxes(0, 1)
+polygons_to_show = np.append(norm_train_polygons[:1], predicted_polygons[1:]).reshape(
+    100, 47, 2
 )
 
-# ONE-STEP PREDICTION
-y_pred = model.predict(X_train[:1])
-predicted_polygons = np.reshape(y_pred, (100, 47, 2))
-
 plotter.plot_npz_control_points(
-    predicted_polygons[1:],
-    title="One-Step Prediction On Train Set",
+    polygons_to_show,
+    title="E13: Multiple-Step Prediction On Train Set",
     plot_cb=finger_position_plot(norm_train_finger_positions),
 )
 
 # PREDICT ON VALIDATION SET
-y_pred = model.predict(X_valid[:1])
-predicted_polygons = np.reshape(y_pred, (100, 47, 2))
+y_pred = model.predict([X_valid_cp[:, :1, :], X_valid_finger])
+predicted_polygons = y_pred.swapaxes(0, 1)
+polygons_to_show = np.append(norm_valid_polygons[:1], predicted_polygons[1:]).reshape(
+    100, 47, 2
+)
 
 plotter.plot_npz_control_points(
-    predicted_polygons[1:],
-    title="One-Step Prediction On Validation Set",
+    polygons_to_show,
+    title="E13: Multiple-Step Prediction On Validation Set",
     plot_cb=finger_position_plot(norm_valid_finger_positions),
 )

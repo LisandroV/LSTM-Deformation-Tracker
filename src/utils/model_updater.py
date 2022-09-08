@@ -28,6 +28,7 @@ def save_best_model(
     else:
         print("New model was not better than the stored one")
 
+
 def save_best_subclassing_model(
     new_model: keras.models,
     stored_model_name: str,

@@ -29,7 +29,9 @@ script_args = get_script_args()
 
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
-STORED_MODEL_DIR: str = "saved_models/best_11_no_teacher_subclassing_24n"
+#STORED_MODEL_DIR: str = "saved_models/best_11_no_teacher_subclassing_100n"
+STORED_MODEL_DIR: str = "saved_models/best_13_subset_train_50n"
+CHECKPOINT_MODEL_DIR: str = f"{STORED_MODEL_DIR}/checkpoint/"
 SHOULD_TRAIN_MODEL: bool = script_args.train
 
 
@@ -91,16 +93,18 @@ finger_position_plot = lambda positions: lambda ax: ax.scatter(
 )
 
 # plotter.plot_npz_control_points(
-#     norm_train_polygons,
+#     norm_train_polygons.take([0,3,12,16,19,22,26,28,29,37,39,40,46], axis=1),
 #     title="Normalized Training Control Points",
 #     plot_cb=finger_position_plot(norm_train_finger_positions),
 # )
 
+
 # plotter.plot_npz_control_points(
-#     norm_valid_polygons,
+#     norm_valid_polygons.take([0,6,7,9,16,20,24,25,33,34,38,39,43], axis=1),
 #     title="Normalized Validation Control Points",
 #     plot_cb=finger_position_plot(norm_valid_finger_positions),
 # )
+
 
 # plotter.plot_finger_force(norm_train_forces, title="Normalized Training Finger Force")
 
@@ -113,10 +117,11 @@ mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_ax
 )
 
 # plotter.plot_npz_control_points(
-#     mirrored_polygons,
+#     mirrored_polygons.take([0,6,7,9,16,20,24,25,33,34,38,39,43], axis=1),
 #     title="Mirrored Data for training",
 #     plot_cb=finger_position_plot(mirrored_finger_positions),
 # )
+
 
 (
     X_train_mirror_cp,
@@ -151,27 +156,27 @@ model = DeformationTrackerModel()
 model.compile(loss="mse", optimizer="adam")
 model.setTeacherForcing(False)
 
-try:
-    prev_model = keras.models.load_model(
-        STORED_MODEL_DIR,
-        custom_objects={"DeformationTrackerModel": DeformationTrackerModel},
-    )
-    model.setTeacherForcing(True)
-    model.build(input_shape=[(None, 100, 2), (None, 100, 3)])  # init model weights
-    model.set_weights(prev_model.get_weights())  # to use last model
-    # model.load_weights(CHECKPOINT_MODEL_DIR) #to use checkpoint
-    print("Using stored model.")
-    model.setTeacherForcing(False)
-    print(
-        f"Stored model train loss: {model.evaluate([X_train_cp[:,:1,:], X_train_finger],y_train)}"
-    )
-    print(
-        f"Stored model valid loss: {model.evaluate([X_valid_cp[:,:1,:], X_valid_finger], y_valid)}"
-    )
-except:
-    sys.exit(
-        "Error:  There is no model saved.\n\tTo use the flag --train, the model has to be trained before."
-    )
+# try:
+# prev_model = keras.models.load_model(
+#     STORED_MODEL_DIR,
+#     custom_objects={"DeformationTrackerModel": DeformationTrackerModel},
+# )
+model.setTeacherForcing(True)
+model.build(input_shape=[(None, 100, 2), (None, 100, 3)])  # init model weights
+#model.set_weights(prev_model.get_weights())  # to use last model
+model.load_weights(CHECKPOINT_MODEL_DIR) #to use checkpoint
+print("Using stored model.")
+model.setTeacherForcing(False)
+print(
+    f"Stored model train loss: {model.evaluate([X_train_cp[:,:1,:], X_train_finger],y_train)}"
+)
+print(
+    f"Stored model valid loss: {model.evaluate([X_valid_cp[:,:1,:], X_valid_finger], y_valid)}"
+)
+# except:
+#     sys.exit(
+#         "Error:  There is no model saved.\n\tTo use the flag --train, the model has to be trained before."
+#     )
 
 
 # PREDICTION -------------------------------------------------------------------

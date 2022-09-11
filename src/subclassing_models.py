@@ -7,7 +7,7 @@ class DeformationTrackerModel(tf.keras.Model):
     def __init__(self, **kwargs):
         super().__init__(kwargs)
         self.hidden1 = tf.keras.layers.SimpleRNN(
-            24,
+            50,
             return_sequences=True,
             input_shape=[None, 5],
             name="first_hidden",
@@ -15,7 +15,7 @@ class DeformationTrackerModel(tf.keras.Model):
             bias_initializer="zeros",
         )
         self.hidden2 = tf.keras.layers.SimpleRNN(
-            24,
+            50,
             return_sequences=True,
             name="second_hidden",
             kernel_initializer="random_normal",

@@ -32,7 +32,9 @@ TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
 MODEL_NAME: str = "12_random_search"
 SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
-PREV_MODEL_DIR: str = "saved_models/best_11_no_teacher_subclassing_24n"
+
+PREV_MODEL_NAME: str = "11_no_teacher_subclassing_24n"
+PREV_MODEL_DIR: str = f"saved_models/best_{PREV_MODEL_NAME}"
 CHECKPOINT_MODEL_DIR: str = f"{PREV_MODEL_DIR}/checkpoint/"
 SHOULD_TRAIN_MODEL: bool = script_args.train
 

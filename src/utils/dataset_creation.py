@@ -149,13 +149,14 @@ def create_teacher_forcing_dataset(
     but it creates two inputs, one for control points, and the other for the finger data
     """
     # create X_data
+    num_control_points: int = polygons.shape[1] # 47
     X_control_points = polygons.swapaxes(0, 1)  # shape: (47, 100, 2)
     X_finger_data = np.array(
-        [np.append(finger_positions, finger_force.reshape(100, 1), axis=1)] * 47
+        [np.append(finger_positions, finger_force.reshape(100, 1), axis=1)] * num_control_points
     )  # shape (47,100,3)
 
     # create y_data, shape: (47,100,2)
-    y_data = np.zeros((47, 100, 2))
+    y_data = np.zeros((num_control_points, 100, 2))
     for contol_point_index in range(polygons.shape[1]):
         control_point_sequece = polygons[:, contol_point_index, :]
         y_data[contol_point_index, :-1] = control_point_sequece[1:]

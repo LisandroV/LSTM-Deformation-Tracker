@@ -30,8 +30,10 @@ script_args = get_script_args()
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
 #STORED_MODEL_DIR: str = "saved_models/best_11_no_teacher_subclassing_100n"
-STORED_MODEL_DIR: str = "saved_models/best_13_subset_train_50n"
-CHECKPOINT_MODEL_DIR: str = f"{STORED_MODEL_DIR}/checkpoint/"
+#STORED_MODEL_DIR: str = "saved_models/best_13_subset_train_50n"
+STORED_MODEL_DIR: str = "saved_models/best_12_random_search_50n_11"
+#CHECKPOINT_MODEL_DIR: str = f"{STORED_MODEL_DIR}/checkpoint/"
+CHECKPOINT_MODEL_DIR: str = f"{STORED_MODEL_DIR}/checkpoint/train/"
 SHOULD_TRAIN_MODEL: bool = script_args.train
 
 
@@ -92,12 +94,17 @@ finger_position_plot = lambda positions: lambda ax: ax.scatter(
     range(time_steps), positions[:, 0], positions[:, 1], s=10
 )
 
-# plotter.plot_npz_control_points(
-#     norm_train_polygons.take([0,3,12,16,19,22,26,28,29,37,39,40,46], axis=1),
-#     title="Normalized Training Control Points",
-#     plot_cb=finger_position_plot(norm_train_finger_positions),
-# )
+plotter.plot_npz_control_points(
+    norm_train_polygons.take([0,3,12,16,19,22,26,28,29,37,39,40,46], axis=1),
+    title="Normalized Training Control Points",
+    plot_cb=finger_position_plot(norm_train_finger_positions),
+)
 
+plotter.plot_npz_control_points(
+    norm_train_polygons,
+    title="Normalized Training Control Points",
+    plot_cb=finger_position_plot(norm_train_finger_positions),
+)
 
 # plotter.plot_npz_control_points(
 #     norm_valid_polygons.take([0,6,7,9,16,20,24,25,33,34,38,39,43], axis=1),

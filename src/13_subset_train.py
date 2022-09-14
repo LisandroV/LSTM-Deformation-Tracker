@@ -2,9 +2,7 @@
 In this experiment the model will be trained only with the control points with the most significant deformation, this means the closest to the finger.
 With this we expect the model to lear the deformation, which is what the model is missing.
 
-This experiment is based on Experiment-08
-
-Results: Best results so far, the control points stay on its place, but still has to follow the finger trayectory.
+Results: poor
 """
 
 import os

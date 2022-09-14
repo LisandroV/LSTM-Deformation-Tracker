@@ -30,12 +30,16 @@ script_args = get_script_args()
 
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
-MODEL_NAME: str = "12_random_search"
-SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
 
-PREV_MODEL_NAME: str = "11_no_teacher_subclassing_24n"
+MODEL_NAME: str = "12_random_search_50n_11"
+SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
+CHECKPOINT_TRAIN_MODEL_DIR: str = f"{SAVED_MODEL_DIR}/checkpoint/train/"
+CHECKPOINT_VALID_MODEL_DIR: str = f"{SAVED_MODEL_DIR}/checkpoint/valid/"
+
+PREV_MODEL_NAME: str = "11_no_teacher_subclassing_50n"
+# PREV_MODEL_NAME: str = "10_subclassing_api_50n"
 PREV_MODEL_DIR: str = f"saved_models/best_{PREV_MODEL_NAME}"
-CHECKPOINT_MODEL_DIR: str = f"{PREV_MODEL_DIR}/checkpoint/"
+PREV_CHECKPOINT_MODEL_DIR: str = f"{PREV_MODEL_DIR}/checkpoint/"
 SHOULD_TRAIN_MODEL: bool = script_args.train
 
 
@@ -96,33 +100,10 @@ finger_position_plot = lambda positions: lambda ax: ax.scatter(
     range(time_steps), positions[:, 0], positions[:, 1], s=10
 )
 
-# plotter.plot_npz_control_points(
-#     norm_train_polygons,
-#     title="Normalized Training Control Points",
-#     plot_cb=finger_position_plot(norm_train_finger_positions),
-# )
-
-# plotter.plot_npz_control_points(
-#     norm_valid_polygons,
-#     title="Normalized Validation Control Points",
-#     plot_cb=finger_position_plot(norm_valid_finger_positions),
-# )
-
-# plotter.plot_finger_force(norm_train_forces, title="Normalized Training Finger Force")
-
-# plotter.plot_finger_force(norm_valid_forces, title="Normalized Validation Finger Force")
-
-
 # CREATE DATASET ---------------------------------------------------------------
 mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_axis(
     norm_valid_polygons, norm_valid_finger_positions, norm_valid_forces
 )
-
-# plotter.plot_npz_control_points(
-#     mirrored_polygons,
-#     title="Mirrored Data for training",
-#     plot_cb=finger_position_plot(mirrored_finger_positions),
-# )
 
 (
     X_train_mirror_cp,
@@ -156,6 +137,22 @@ tensorboard_cb = keras.callbacks.TensorBoard(
     log_dir=log_name, histogram_freq=100, write_graph=True
 )
 
+# SAVE BEST CALLBACK
+checkpoint_train_cb = keras.callbacks.ModelCheckpoint(
+    filepath=CHECKPOINT_TRAIN_MODEL_DIR,
+    save_weights_only=True,
+    monitor="val_loss",# TODO: change to loss
+    mode="min",
+    save_best_only=True,
+)
+
+checkpoint_valid_cb = keras.callbacks.ModelCheckpoint(
+    filepath=CHECKPOINT_VALID_MODEL_DIR,
+    save_weights_only=True,
+    monitor="loss",# TODO: change to val_loss
+    mode="min",
+    save_best_only=True,
+)
 
 def load_model() -> DeformationTrackerModel:
     model = DeformationTrackerModel()
@@ -167,8 +164,8 @@ def load_model() -> DeformationTrackerModel:
         PREV_MODEL_DIR,
         custom_objects={"DeformationTrackerModel": DeformationTrackerModel},
     )
-    # model.set_weights(prev_model.get_weights()) # to use last model of previous training
-    model.load_weights(CHECKPOINT_MODEL_DIR)  # to use best model of previous training
+    model.set_weights(prev_model.get_weights()) # to use last model of previous training
+    # model.load_weights(PREV_CHECKPOINT_MODEL_DIR)  # to use best model of previous training
     print("Using stored model.")
 
     return model
@@ -178,9 +175,10 @@ def build_model(hp):
     model: DeformationTrackerModel = load_model()
     learning_rate = hp.Float("lr", min_value=1e-4, max_value=2e-2, sampling="log")
     epsilon = hp.Float("epsilon", min_value=1e-7, max_value=1e-5, sampling="log")
+    beta_1 = hp.Float("beta_1", min_value=0.7, max_value=0.95)
     model.setTeacherForcing(False)
     model.compile(
-        optimizer=keras.optimizers.Adam(learning_rate=learning_rate, epsilon=epsilon),
+        optimizer=keras.optimizers.Adam(learning_rate=learning_rate, beta_1=beta_1, epsilon=epsilon),
         loss="mse",
     )
 
@@ -190,7 +188,7 @@ def build_model(hp):
 tuner = keras_tuner.RandomSearch(
     hypermodel=build_model,
     objective="val_loss",
-    max_trials=20,
+    max_trials=60,
     executions_per_trial=1,
     overwrite=True,
     directory="saved_models/random_search",
@@ -201,12 +199,12 @@ tuner.search_space_summary()
 tuner.search(
     [X_train_cp[:, :1, :], X_train_finger],
     y_train,
-    epochs=4000,
+    epochs=5000,
     validation_data=(
         [X_valid_cp, X_valid_finger],
         y_valid,
     ),
-    callbacks=[tensorboard_cb],
+    callbacks=[tensorboard_cb, checkpoint_train_cb, checkpoint_valid_cb],
 )
 
 

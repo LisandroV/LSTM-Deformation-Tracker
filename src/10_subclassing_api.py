@@ -20,6 +20,7 @@ from read_data.finger_position_reader import read_finger_positions_file
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
 from utils.dataset_creation import create_teacher_forcing_dataset, mirror_data_x_axis
+from utils.weight_plot_callback import PlotWeightsCallback
 from subclassing_models import DeformationTrackerModel
 import plots.dataset_plotter as plotter
 import utils.logs as util_logs
@@ -32,7 +33,8 @@ script_args = get_script_args()
 
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
-MODEL_NAME: str = "10_subclassing_api_100n"
+#MODEL_NAME: str = "10_subclassing_api_50n_cb_test"
+MODEL_NAME: str = "BBBB"
 SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
 SHOULD_TRAIN_MODEL: bool = script_args.train
 
@@ -125,14 +127,6 @@ X_valid_cp, X_valid_finger, y_valid = create_teacher_forcing_dataset(
 )
 
 
-# MODEL CREATION --------------------------------------------------------------
-
-model = DeformationTrackerModel()
-
-
-model.compile(loss="mse", optimizer="adam")
-
-
 # SETUP TENSORBOARD LOGS -------------------------------------------------------
 log_name = util_logs.get_log_filename(MODEL_NAME)
 tensorboard_cb = keras.callbacks.TensorBoard(
@@ -142,6 +136,13 @@ tensorboard_cb = keras.callbacks.TensorBoard(
 
 # EARLY STOPPING
 early_stopping_cb = keras.callbacks.EarlyStopping(patience=20, min_delta=0.0001)
+
+# MODEL CREATION --------------------------------------------------------------
+
+model = DeformationTrackerModel(log_dir=log_name)
+
+
+model.compile(loss="mse", optimizer="adam")
 
 
 # TRAIN ------------------------------------------------------------------------
@@ -154,8 +155,8 @@ if SHOULD_TRAIN_MODEL:
             [X_valid_cp, X_valid_finger],
             y_valid,
         ),
-        epochs=10000,
-        callbacks=[tensorboard_cb],
+        epochs=100,
+        callbacks=[tensorboard_cb, PlotWeightsCallback()],
     )
 
     save_best_model(model, SAVED_MODEL_DIR, [X_valid_cp, X_valid_finger], y_valid)

@@ -17,11 +17,11 @@ from tensorflow import keras
 
 from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
+from subclassing_models import DeformationTrackerModel
+from utils.dataset_creation import create_teacher_forcing_dataset, mirror_data_x_axis
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
-from utils.dataset_creation import create_teacher_forcing_dataset, mirror_data_x_axis
 from utils.weight_plot_callback import PlotWeightsCallback
-from subclassing_models import DeformationTrackerModel
 import plots.dataset_plotter as plotter
 import utils.logs as util_logs
 import utils.normalization as normalization
@@ -33,8 +33,7 @@ script_args = get_script_args()
 
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
-#MODEL_NAME: str = "10_subclassing_api_50n_cb_test"
-MODEL_NAME: str = "BBBB"
+MODEL_NAME: str = "10_subclassing_api_50n_weights"
 SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
 SHOULD_TRAIN_MODEL: bool = script_args.train
 
@@ -155,8 +154,9 @@ if SHOULD_TRAIN_MODEL:
             [X_valid_cp, X_valid_finger],
             y_valid,
         ),
-        epochs=100,
-        callbacks=[tensorboard_cb, PlotWeightsCallback()],
+        epochs=6000,
+        callbacks=[tensorboard_cb, PlotWeightsCallback(plot_step=20)],
+        workers=4
     )
 
     save_best_model(model, SAVED_MODEL_DIR, [X_valid_cp, X_valid_finger], y_valid)

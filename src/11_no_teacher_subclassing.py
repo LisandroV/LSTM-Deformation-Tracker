@@ -16,13 +16,14 @@ from tensorflow import keras
 
 from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
+from subclassing_models import DeformationTrackerModel
+from utils.dataset_creation import create_teacher_forcing_dataset, mirror_data_x_axis
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
-from utils.dataset_creation import create_teacher_forcing_dataset, mirror_data_x_axis
+from utils.weight_plot_callback import PlotWeightsCallback
 import plots.dataset_plotter as plotter
 import utils.logs as util_logs
 import utils.normalization as normalization
-from subclassing_models import DeformationTrackerModel
 
 np.random.seed(42)
 tf.random.set_seed(42)
@@ -31,10 +32,15 @@ script_args = get_script_args()
 
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
-MODEL_NAME: str = "11_no_teacher_subclassing_24n"
+
+MODEL_NAME: str = "11_50n_weights"
 SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
 CHECKPOINT_MODEL_DIR: str = f"{SAVED_MODEL_DIR}/checkpoint/"
-PREV_MODEL_DIR: str = "saved_models/best_10_subclassing_api_24n"
+
+PREV_MODEL_NAME: str = "10_subclassing_api_50n_weights"
+PREV_MODEL_DIR: str = f"saved_models/best_{PREV_MODEL_NAME}"
+PREV_CHECKPOINT_MODEL_DIR: str = f"{PREV_MODEL_DIR}/checkpoint/"
+
 SHOULD_TRAIN_MODEL: bool = script_args.train
 
 
@@ -149,14 +155,6 @@ X_valid_cp, X_valid_finger, y_valid = create_teacher_forcing_dataset(
 )
 
 
-model = DeformationTrackerModel()
-
-# print(model.summary())
-
-model.compile(loss="mse", optimizer="adam")
-model.setTeacherForcing(False)
-
-
 # SETUP TENSORBOARD LOGS -------------------------------------------------------
 log_name = util_logs.get_log_filename(MODEL_NAME)
 tensorboard_cb = keras.callbacks.TensorBoard(
@@ -176,6 +174,15 @@ checkpoint_cb = keras.callbacks.ModelCheckpoint(
     save_best_only=True,
 )
 
+# CREATE MODEL
+model = DeformationTrackerModel(log_dir=log_name)
+
+# print(model.summary())
+
+model.compile(loss="mse", optimizer="adam")
+model.setTeacherForcing(False)
+
+
 # TRAIN ------------------------------------------------------------------------
 if SHOULD_TRAIN_MODEL:
     prev_model = keras.models.load_model(
@@ -192,8 +199,8 @@ if SHOULD_TRAIN_MODEL:
             [X_valid_cp, X_valid_finger],
             y_valid,
         ),
-        epochs=6000,
-        callbacks=[tensorboard_cb, checkpoint_cb],
+        epochs=4000,
+        callbacks=[tensorboard_cb, checkpoint_cb, PlotWeightsCallback(plot_step=50)],
     )
 
     save_best_model(model, SAVED_MODEL_DIR, [X_valid_cp, X_valid_finger], y_valid)

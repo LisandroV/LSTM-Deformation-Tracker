@@ -33,11 +33,11 @@ script_args = get_script_args()
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
 
-MODEL_NAME: str = "15_50n"
+MODEL_NAME: str = "15_50n_discrete"
 SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
 CHECKPOINT_MODEL_DIR: str = f"{SAVED_MODEL_DIR}/checkpoint/"
 
-PREV_MODEL_NAME: str = "14_50n"
+PREV_MODEL_NAME: str = "14_50n_discrete"
 PREV_MODEL_DIR: str = f"saved_models/best_{PREV_MODEL_NAME}"
 PREV_CHECKPOINT_MODEL_DIR: str = f"{PREV_MODEL_DIR}/checkpoint/"
 
@@ -81,12 +81,14 @@ norm_train_finger_positions = normalization.normalize_finger_position(
     train_polygons, train_finger_positions
 )
 norm_train_forces = normalization.normalize_force(train_forces)
+norm_train_forces = np.array([0]*11 + [1]*38 + [-1]*35 + [0]*16) # use a discrete function instead
 
 norm_valid_polygons = normalization.normalize_polygons(validation_polygons)
 norm_valid_finger_positions = normalization.normalize_finger_position(
     validation_polygons, validation_finger_positions
 )
 norm_valid_forces = normalization.normalize_force(validation_forces)
+norm_valid_forces = np.array([0]*14 + [1]*36 + [-1]*36 + [0]*14) # use a discrete function instead
 
 
 # PLOT DATA --------------------------------------------------------------------
@@ -114,11 +116,9 @@ finger_position_plot = lambda positions: lambda ax: ax.scatter(
 # )
 
 # plotter.plot_finger_force(norm_train_forces, title="Normalized Training Finger Force")
-norm_train_forces = np.array([0]*11 + [1]*38 + [-1]*35 + [0]*16)
 
 
 # plotter.plot_finger_force(norm_valid_forces, title="Normalized Validation Finger Force")
-norm_valid_forces = np.array([0]*14 + [1]*36 + [-1]*36 + [0]*14)
 
 
 

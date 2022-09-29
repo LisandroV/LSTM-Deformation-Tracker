@@ -16,7 +16,11 @@ from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
-from utils.dataset_creation import create_teacher_forcing_dataset, create_calculated_values_dataset, mirror_data_x_axis
+from utils.dataset_creation import (
+    create_teacher_forcing_dataset,
+    create_calculated_values_dataset,
+    mirror_data_x_axis,
+)
 import plots.dataset_plotter as plotter
 import utils.logs as util_logs
 import utils.normalization as normalization
@@ -29,11 +33,11 @@ script_args = get_script_args()
 
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
-#STORED_MODEL_DIR: str = "saved_models/best_11_no_teacher_subclassing_100n"
+# STORED_MODEL_DIR: str = "saved_models/best_11_no_teacher_subclassing_100n"
 STORED_MODEL_DIR: str = "saved_models/best_15_50n_discrete"
-#STORED_MODEL_DIR: str = "saved_models/best_12_random_search_50n_11"
+# STORED_MODEL_DIR: str = "saved_models/best_12_random_search_50n_11"
 CHECKPOINT_MODEL_DIR: str = f"{STORED_MODEL_DIR}/checkpoint/"
-#CHECKPOINT_MODEL_DIR: str = f"{STORED_MODEL_DIR}/checkpoint/train/"
+# CHECKPOINT_MODEL_DIR: str = f"{STORED_MODEL_DIR}/checkpoint/train/"
 SHOULD_TRAIN_MODEL: bool = script_args.train
 
 
@@ -170,8 +174,8 @@ model.setTeacherForcing(False)
 # )
 model.setTeacherForcing(True)
 model.build(input_shape=[(None, 100, 2), (None, 100, 4)])  # init model weights
-#model.set_weights(prev_model.get_weights())  # to use last model
-model.load_weights(CHECKPOINT_MODEL_DIR) #to use checkpoint
+# model.set_weights(prev_model.get_weights())  # to use last model
+model.load_weights(CHECKPOINT_MODEL_DIR)  # to use checkpoint
 print("Using stored model.")
 model.setTeacherForcing(False)
 print(

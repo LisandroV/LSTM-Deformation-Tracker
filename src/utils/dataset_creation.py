@@ -149,10 +149,11 @@ def create_teacher_forcing_dataset(
     but it creates two inputs, one for control points, and the other for the finger data
     """
     # create X_data
-    num_control_points: int = polygons.shape[1] # 47
+    num_control_points: int = polygons.shape[1]  # 47
     X_control_points = polygons.swapaxes(0, 1)  # shape: (47, 100, 2)
     X_finger_data = np.array(
-        [np.append(finger_positions, finger_force.reshape(100, 1), axis=1)] * num_control_points
+        [np.append(finger_positions, finger_force.reshape(100, 1), axis=1)]
+        * num_control_points
     )  # shape (47,100,3)
 
     # create y_data, shape: (47,100,2)
@@ -185,6 +186,7 @@ def create_no_teacher_forcing_dataset(
 
     return X_first_control_points, np.array(X_finger_data), y_data
 
+
 def calculte_distances(control_points, finger_positions):
     """
     returns the distance from all control points to the finger
@@ -193,16 +195,16 @@ def calculte_distances(control_points, finger_positions):
     returns:
         distances: shape(47,100)
     """
-    num_control_points: int = control_points.shape[0] # 47
-    num_steps: int = control_points.shape[1] # 100
-    distances = np.zeros((num_control_points,num_steps))
+    num_control_points: int = control_points.shape[0]  # 47
+    num_steps: int = control_points.shape[1]  # 100
+    distances = np.zeros((num_control_points, num_steps))
     for i in range(num_control_points):
         difference = control_points[i] - finger_positions
-        sum_sq = np.sqrt(np.sum(np.power(difference, 2),axis=1))
-        distances[i]=sum_sq
+        sum_sq = np.sqrt(np.sum(np.power(difference, 2), axis=1))
+        distances[i] = sum_sq
 
     return distances
-    
+
 
 # plygons shape: (100, 47, 2)
 def create_calculated_values_dataset(
@@ -213,13 +215,16 @@ def create_calculated_values_dataset(
         * distance between finger and control point
     """
     # create X_data
-    num_control_points: int = polygons.shape[1] # 47
+    num_control_points: int = polygons.shape[1]  # 47
     X_control_points = polygons.swapaxes(0, 1)  # shape: (47, 100, 2)
     distance_to_finger = calculte_distances(X_control_points, finger_positions)
     X_finger_data = np.array(
-        [np.append(finger_positions, finger_force.reshape(100, 1), axis=1)] * num_control_points
-    ) # shape (47,100,3)
-    X_finger_data = np.append(X_finger_data, distance_to_finger.reshape(47,100,1), axis=2) # shape (47,100,4)
+        [np.append(finger_positions, finger_force.reshape(100, 1), axis=1)]
+        * num_control_points
+    )  # shape (47,100,3)
+    X_finger_data = np.append(
+        X_finger_data, distance_to_finger.reshape(47, 100, 1), axis=2
+    )  # shape (47,100,4)
     # create y_data, shape: (47,100,2)
     y_data = np.zeros((num_control_points, 100, 2))
     for contol_point_index in range(polygons.shape[1]):

@@ -200,7 +200,7 @@ if SHOULD_TRAIN_MODEL:
             y_valid,
         ),
         epochs=4000,
-        callbacks=[tensorboard_cb, checkpoint_cb, PlotWeightsCallback(plot_step=50)],
+        callbacks=[tensorboard_cb, checkpoint_cb, PlotWeightsCallback(plot_freq=50)],
     )
 
     save_best_model(model, SAVED_MODEL_DIR, [X_valid_cp, X_valid_finger], y_valid)

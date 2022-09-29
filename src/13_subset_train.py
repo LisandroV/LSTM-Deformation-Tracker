@@ -110,8 +110,9 @@ mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_ax
     X_subset_train_mirror_finger,
     y_subset_train_mirror,
 ) = create_teacher_forcing_dataset(
-    mirrored_polygons.take([0,6,7,9,16,20,24,25,33,34,38,39,43], axis=1),
-    mirrored_finger_positions, mirrored_forces
+    mirrored_polygons.take([0, 6, 7, 9, 16, 20, 24, 25, 33, 34, 38, 39, 43], axis=1),
+    mirrored_finger_positions,
+    mirrored_forces,
 )
 
 (
@@ -119,13 +120,20 @@ mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_ax
     X_subset_train_center_sponge_finger,
     y_subset_train_center_sponge,
 ) = create_teacher_forcing_dataset(
-    norm_train_polygons.take([0,3,12,16,19,22,26,28,29,37,39,40,46], axis=1),
-    norm_train_finger_positions, norm_train_forces
+    norm_train_polygons.take(
+        [0, 3, 12, 16, 19, 22, 26, 28, 29, 37, 39, 40, 46], axis=1
+    ),
+    norm_train_finger_positions,
+    norm_train_forces,
 )
 
 # Data augmentation
-X_subset_train_cp = np.concatenate((X_subset_train_center_sponge_cp, X_subset_train_mirror_cp))
-X_subset_train_finger = np.concatenate((X_subset_train_center_sponge_finger, X_subset_train_mirror_finger))
+X_subset_train_cp = np.concatenate(
+    (X_subset_train_center_sponge_cp, X_subset_train_mirror_cp)
+)
+X_subset_train_finger = np.concatenate(
+    (X_subset_train_center_sponge_finger, X_subset_train_mirror_finger)
+)
 y_subset_train = np.concatenate((y_subset_train_center_sponge, y_subset_train_mirror))
 
 
@@ -154,7 +162,7 @@ tensorboard_cb = keras.callbacks.TensorBoard(
 )
 
 tensorboard_subset_cb = keras.callbacks.TensorBoard(
-    log_dir=(log_name + '_subset'), histogram_freq=100, write_graph=True
+    log_dir=(log_name + "_subset"), histogram_freq=100, write_graph=True
 )
 
 # EARLY STOPPING
@@ -176,8 +184,10 @@ if SHOULD_TRAIN_MODEL:
         custom_objects={"DeformationTrackerModel": DeformationTrackerModel},
     )
     model.build(input_shape=[(None, 100, 2), (None, 100, 3)])  # init model weights
-    #model.set_weights(prev_model.get_weights()) # to load from model at the end of training
-    model.load_weights(PREV_CHECKPOINT_MODEL_DIR) # to load from checkpoint, best model found
+    # model.set_weights(prev_model.get_weights()) # to load from model at the end of training
+    model.load_weights(
+        PREV_CHECKPOINT_MODEL_DIR
+    )  # to load from checkpoint, best model found
 
     # Train with subset containing only cp closest to the finger
     history = model.fit(

@@ -15,13 +15,17 @@ import keras_tuner
 
 from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
+from subclassing_models import DeformationTrackerModel
+from utils.dataset_creation import (
+    create_teacher_forcing_dataset,
+    create_calculated_values_dataset,
+    mirror_data_x_axis,
+)
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
-from utils.dataset_creation import create_teacher_forcing_dataset, create_calculated_values_dataset, mirror_data_x_axis
 import plots.dataset_plotter as plotter
 import utils.logs as util_logs
 import utils.normalization as normalization
-from subclassing_models import DeformationTrackerModel
 
 np.random.seed(42)
 tf.random.set_seed(42)
@@ -80,14 +84,14 @@ norm_train_finger_positions = normalization.normalize_finger_position(
     train_polygons, train_finger_positions
 )
 norm_train_forces = normalization.normalize_force(train_forces)
-#norm_train_forces = np.array([0]*11 + [1]*38 + [-1]*35 + [0]*16) # use a discrete function instead
+# norm_train_forces = np.array([0]*11 + [1]*38 + [-1]*35 + [0]*16) # use a discrete function instead
 
 norm_valid_polygons = normalization.normalize_polygons(validation_polygons)
 norm_valid_finger_positions = normalization.normalize_finger_position(
     validation_polygons, validation_finger_positions
 )
 norm_valid_forces = normalization.normalize_force(validation_forces)
-#norm_valid_forces = np.array([0]*14 + [1]*36 + [-1]*36 + [0]*14) # use a discrete function instead
+# norm_valid_forces = np.array([0]*14 + [1]*36 + [-1]*36 + [0]*14) # use a discrete function instead
 
 
 # PLOT DATA --------------------------------------------------------------------
@@ -143,7 +147,7 @@ tensorboard_cb = keras.callbacks.TensorBoard(
 checkpoint_train_cb = keras.callbacks.ModelCheckpoint(
     filepath=CHECKPOINT_TRAIN_MODEL_DIR,
     save_weights_only=True,
-    monitor="val_loss",# TODO: change to loss
+    monitor="val_loss",  # TODO: change to loss
     mode="min",
     save_best_only=True,
 )
@@ -151,13 +155,14 @@ checkpoint_train_cb = keras.callbacks.ModelCheckpoint(
 checkpoint_valid_cb = keras.callbacks.ModelCheckpoint(
     filepath=CHECKPOINT_VALID_MODEL_DIR,
     save_weights_only=True,
-    monitor="loss",# TODO: change to val_loss
+    monitor="loss",  # TODO: change to val_loss
     mode="min",
     save_best_only=True,
 )
 
+
 def load_model() -> DeformationTrackerModel:
-    model = DeformationTrackerModel()
+    model = DeformationTrackerModel(log_dir=log_name)
     model.setTeacherForcing(True)
     model.build(input_shape=[(None, 100, 2), (None, 100, 3)])  # init model weights
     # model.compile(loss="mse", optimizer="adam")
@@ -166,7 +171,9 @@ def load_model() -> DeformationTrackerModel:
         PREV_MODEL_DIR,
         custom_objects={"DeformationTrackerModel": DeformationTrackerModel},
     )
-    model.set_weights(prev_model.get_weights()) # to use last model of previous training
+    model.set_weights(
+        prev_model.get_weights()
+    )  # to use last model of previous training
     # model.load_weights(PREV_CHECKPOINT_MODEL_DIR)  # to use best model of previous training
     print("Using stored model.")
 
@@ -180,7 +187,9 @@ def build_model(hp):
     beta_1 = hp.Float("beta_1", min_value=0.7, max_value=0.95)
     model.setTeacherForcing(False)
     model.compile(
-        optimizer=keras.optimizers.Adam(learning_rate=learning_rate, beta_1=beta_1, epsilon=epsilon),
+        optimizer=keras.optimizers.Adam(
+            learning_rate=learning_rate, beta_1=beta_1, epsilon=epsilon
+        ),
         loss="mse",
     )
 
@@ -190,7 +199,7 @@ def build_model(hp):
 tuner = keras_tuner.RandomSearch(
     hypermodel=build_model,
     objective="val_loss",
-    max_trials=1,
+    max_trials=3,
     executions_per_trial=1,
     overwrite=True,
     directory="saved_models/random_search",
@@ -201,7 +210,7 @@ tuner.search_space_summary()
 tuner.search(
     [X_train_cp[:, :1, :], X_train_finger],
     y_train,
-    epochs=1,#5000,
+    epochs=3,  # 5000,
     validation_data=(
         [X_valid_cp, X_valid_finger],
         y_valid,

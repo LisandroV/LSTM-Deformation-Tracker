@@ -17,7 +17,7 @@ from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
-from utils.dataset_creation import create_teacher_forcing_dataset, mirror_data_x_axis
+from utils.dataset_creation import create_teacher_forcing_dataset, create_calculated_values_dataset, mirror_data_x_axis
 import plots.dataset_plotter as plotter
 import utils.logs as util_logs
 import utils.normalization as normalization
@@ -80,12 +80,14 @@ norm_train_finger_positions = normalization.normalize_finger_position(
     train_polygons, train_finger_positions
 )
 norm_train_forces = normalization.normalize_force(train_forces)
+#norm_train_forces = np.array([0]*11 + [1]*38 + [-1]*35 + [0]*16) # use a discrete function instead
 
 norm_valid_polygons = normalization.normalize_polygons(validation_polygons)
 norm_valid_finger_positions = normalization.normalize_finger_position(
     validation_polygons, validation_finger_positions
 )
 norm_valid_forces = normalization.normalize_force(validation_forces)
+#norm_valid_forces = np.array([0]*14 + [1]*36 + [-1]*36 + [0]*14) # use a discrete function instead
 
 
 # PLOT DATA --------------------------------------------------------------------
@@ -188,7 +190,7 @@ def build_model(hp):
 tuner = keras_tuner.RandomSearch(
     hypermodel=build_model,
     objective="val_loss",
-    max_trials=60,
+    max_trials=1,
     executions_per_trial=1,
     overwrite=True,
     directory="saved_models/random_search",
@@ -199,7 +201,7 @@ tuner.search_space_summary()
 tuner.search(
     [X_train_cp[:, :1, :], X_train_finger],
     y_train,
-    epochs=5000,
+    epochs=1,#5000,
     validation_data=(
         [X_valid_cp, X_valid_finger],
         y_valid,
@@ -220,9 +222,7 @@ best_hps = tuner.get_best_hyperparameters(2)
 
 models = tuner.get_best_models(num_models=2)
 best_model = models[0]
-# Build the model.
-# Needed for `Sequential` without specified `input_shape`.
-best_model.build(input_shape=(None, 28, 28))
+save_best_model(best_model, SAVED_MODEL_DIR, [X_valid_cp, X_valid_finger], y_valid)
 
 
 # PREDICTION -------------------------------------------------------------------

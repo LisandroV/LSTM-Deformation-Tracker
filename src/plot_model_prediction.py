@@ -16,7 +16,7 @@ from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
-from utils.dataset_creation import create_teacher_forcing_dataset, mirror_data_x_axis
+from utils.dataset_creation import create_teacher_forcing_dataset, create_calculated_values_dataset, mirror_data_x_axis
 import plots.dataset_plotter as plotter
 import utils.logs as util_logs
 import utils.normalization as normalization
@@ -30,10 +30,10 @@ script_args = get_script_args()
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
 #STORED_MODEL_DIR: str = "saved_models/best_11_no_teacher_subclassing_100n"
-#STORED_MODEL_DIR: str = "saved_models/best_13_subset_train_50n"
-STORED_MODEL_DIR: str = "saved_models/best_12_random_search_50n_11"
-#CHECKPOINT_MODEL_DIR: str = f"{STORED_MODEL_DIR}/checkpoint/"
-CHECKPOINT_MODEL_DIR: str = f"{STORED_MODEL_DIR}/checkpoint/train/"
+STORED_MODEL_DIR: str = "saved_models/best_15_50n_discrete"
+#STORED_MODEL_DIR: str = "saved_models/best_12_random_search_50n_11"
+CHECKPOINT_MODEL_DIR: str = f"{STORED_MODEL_DIR}/checkpoint/"
+#CHECKPOINT_MODEL_DIR: str = f"{STORED_MODEL_DIR}/checkpoint/train/"
 SHOULD_TRAIN_MODEL: bool = script_args.train
 
 
@@ -94,17 +94,17 @@ finger_position_plot = lambda positions: lambda ax: ax.scatter(
     range(time_steps), positions[:, 0], positions[:, 1], s=10
 )
 
-plotter.plot_npz_control_points(
-    norm_train_polygons.take([0,3,12,16,19,22,26,28,29,37,39,40,46], axis=1),
-    title="Normalized Training Control Points",
-    plot_cb=finger_position_plot(norm_train_finger_positions),
-)
+# plotter.plot_npz_control_points(
+#     norm_train_polygons.take([0,3,12,16,19,22,26,28,29,37,39,40,46], axis=1),
+#     title="Normalized Training Control Points",
+#     plot_cb=finger_position_plot(norm_train_finger_positions),
+# )
 
-plotter.plot_npz_control_points(
-    norm_train_polygons,
-    title="Normalized Training Control Points",
-    plot_cb=finger_position_plot(norm_train_finger_positions),
-)
+# plotter.plot_npz_control_points(
+#     norm_train_polygons,
+#     title="Normalized Training Control Points",
+#     plot_cb=finger_position_plot(norm_train_finger_positions),
+# )
 
 # plotter.plot_npz_control_points(
 #     norm_valid_polygons.take([0,6,7,9,16,20,24,25,33,34,38,39,43], axis=1),
@@ -134,7 +134,7 @@ mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_ax
     X_train_mirror_cp,
     X_train_mirror_finger,
     y_train_mirror,
-) = create_teacher_forcing_dataset(
+) = create_calculated_values_dataset(
     mirrored_polygons, mirrored_finger_positions, mirrored_forces
 )
 
@@ -142,7 +142,7 @@ mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_ax
     X_train_center_sponge_cp,
     X_train_center_sponge_finger,
     y_train_center_sponge,
-) = create_teacher_forcing_dataset(
+) = create_calculated_values_dataset(
     norm_train_polygons, norm_train_finger_positions, norm_train_forces
 )
 
@@ -151,7 +151,7 @@ X_train_cp = np.concatenate((X_train_center_sponge_cp, X_train_mirror_cp))
 X_train_finger = np.concatenate((X_train_center_sponge_finger, X_train_mirror_finger))
 y_train = np.concatenate((y_train_center_sponge, y_train_mirror))
 
-X_valid_cp, X_valid_finger, y_valid = create_teacher_forcing_dataset(
+X_valid_cp, X_valid_finger, y_valid = create_calculated_values_dataset(
     norm_valid_polygons, norm_valid_finger_positions, norm_valid_forces
 )
 
@@ -169,7 +169,7 @@ model.setTeacherForcing(False)
 #     custom_objects={"DeformationTrackerModel": DeformationTrackerModel},
 # )
 model.setTeacherForcing(True)
-model.build(input_shape=[(None, 100, 2), (None, 100, 3)])  # init model weights
+model.build(input_shape=[(None, 100, 2), (None, 100, 4)])  # init model weights
 #model.set_weights(prev_model.get_weights())  # to use last model
 model.load_weights(CHECKPOINT_MODEL_DIR) #to use checkpoint
 print("Using stored model.")
@@ -201,7 +201,7 @@ polygons_to_show = np.append(norm_train_polygons[:1], predicted_polygons[1:]).re
 
 plotter.plot_npz_control_points(
     polygons_to_show,
-    title="E13: Multiple-Step Prediction On Train Set",
+    title="Multiple-Step Prediction On Train Set",
     plot_cb=finger_position_plot(norm_train_finger_positions),
 )
 
@@ -214,6 +214,6 @@ polygons_to_show = np.append(norm_valid_polygons[:1], predicted_polygons[1:]).re
 
 plotter.plot_npz_control_points(
     polygons_to_show,
-    title="E13: Multiple-Step Prediction On Validation Set",
+    title="Multiple-Step Prediction On Validation Set",
     plot_cb=finger_position_plot(norm_valid_finger_positions),
 )

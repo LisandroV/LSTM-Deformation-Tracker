@@ -19,7 +19,7 @@ def create_weight_matrix_image(weights_matrix, image_name):
         image_name (str)
     """
     figure = plt.figure(figsize=(8, 8))
-    plt.imshow(weights_matrix, interpolation='nearest', cmap=plt.cm.Blues)
+    plt.imshow(weights_matrix, interpolation='nearest', cmap=plt.cm.afmhot)
     plt.title(image_name)
     plt.colorbar()
 

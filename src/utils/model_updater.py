@@ -11,6 +11,7 @@ def save_best_model(
     """
     Loads the stored model, compares it with the new one, and replaces it if its better
     """
+    print("Saving best model...")
     new_model_error = new_model.evaluate(X_data, y_data)
     try:
         stored_model = keras.models.load_model(stored_model_name)

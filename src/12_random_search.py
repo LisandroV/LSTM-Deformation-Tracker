@@ -35,12 +35,12 @@ script_args = get_script_args()
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
 
-MODEL_NAME: str = "12_random_search_50n_11"
+MODEL_NAME: str = "12_rs_15_50n_discrete_2"
 SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
 CHECKPOINT_TRAIN_MODEL_DIR: str = f"{SAVED_MODEL_DIR}/checkpoint/train/"
 CHECKPOINT_VALID_MODEL_DIR: str = f"{SAVED_MODEL_DIR}/checkpoint/valid/"
 
-PREV_MODEL_NAME: str = "11_no_teacher_subclassing_50n"
+PREV_MODEL_NAME: str = "12_rs_15_50n_discrete_cdmx"
 # PREV_MODEL_NAME: str = "10_subclassing_api_50n"
 PREV_MODEL_DIR: str = f"saved_models/best_{PREV_MODEL_NAME}"
 PREV_CHECKPOINT_MODEL_DIR: str = f"{PREV_MODEL_DIR}/checkpoint/"
@@ -115,7 +115,7 @@ mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_ax
     X_train_mirror_cp,
     X_train_mirror_finger,
     y_train_mirror,
-) = create_teacher_forcing_dataset(
+) = create_calculated_values_dataset(
     mirrored_polygons, mirrored_finger_positions, mirrored_forces
 )
 
@@ -123,7 +123,7 @@ mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_ax
     X_train_center_sponge_cp,
     X_train_center_sponge_finger,
     y_train_center_sponge,
-) = create_teacher_forcing_dataset(
+) = create_calculated_values_dataset(
     norm_train_polygons, norm_train_finger_positions, norm_train_forces
 )
 
@@ -132,7 +132,7 @@ X_train_cp = np.concatenate((X_train_center_sponge_cp, X_train_mirror_cp))
 X_train_finger = np.concatenate((X_train_center_sponge_finger, X_train_mirror_finger))
 y_train = np.concatenate((y_train_center_sponge, y_train_mirror))
 
-X_valid_cp, X_valid_finger, y_valid = create_teacher_forcing_dataset(
+X_valid_cp, X_valid_finger, y_valid = create_calculated_values_dataset(
     norm_valid_polygons, norm_valid_finger_positions, norm_valid_forces
 )
 
@@ -164,7 +164,7 @@ checkpoint_valid_cb = keras.callbacks.ModelCheckpoint(
 def load_model() -> DeformationTrackerModel:
     model = DeformationTrackerModel(log_dir=log_name)
     model.setTeacherForcing(True)
-    model.build(input_shape=[(None, 100, 2), (None, 100, 3)])  # init model weights
+    model.build(input_shape=[(None, 100, 2), (None, 100, 4)])  # init model weights
     # model.compile(loss="mse", optimizer="adam")
     model.setTeacherForcing(False)
     prev_model = keras.models.load_model(
@@ -199,7 +199,7 @@ def build_model(hp):
 tuner = keras_tuner.RandomSearch(
     hypermodel=build_model,
     objective="val_loss",
-    max_trials=3,
+    max_trials=60,
     executions_per_trial=1,
     overwrite=True,
     directory="saved_models/random_search",
@@ -210,7 +210,7 @@ tuner.search_space_summary()
 tuner.search(
     [X_train_cp[:, :1, :], X_train_finger],
     y_train,
-    epochs=3,  # 5000,
+    epochs=10000,
     validation_data=(
         [X_valid_cp, X_valid_finger],
         y_valid,

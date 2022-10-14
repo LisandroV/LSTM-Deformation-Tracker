@@ -17,7 +17,7 @@ from tensorflow import keras
 
 from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
-from subclassing_models import DeformationTrackerModel
+from subclassing_models import DeformationTrackerBiFlowModel as DeformationTrackerModel
 from utils.dataset_creation import create_calculated_values_dataset, mirror_data_x_axis
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
@@ -33,7 +33,7 @@ script_args = get_script_args()
 
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
-MODEL_NAME: str = "14_50n_discrete"
+MODEL_NAME: str = "14_50n_biflow"
 SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
 SHOULD_TRAIN_MODEL: bool = script_args.train
 

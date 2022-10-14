@@ -24,7 +24,7 @@ from utils.dataset_creation import (
 import plots.dataset_plotter as plotter
 import utils.logs as util_logs
 import utils.normalization as normalization
-from subclassing_models import DeformationTrackerModel
+from subclassing_models import DeformationTrackerBiFlowModel as DeformationTrackerModel
 
 np.random.seed(42)
 tf.random.set_seed(42)
@@ -34,7 +34,7 @@ script_args = get_script_args()
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
 # STORED_MODEL_DIR: str = "saved_models/best_11_no_teacher_subclassing_100n"
-STORED_MODEL_DIR: str = "saved_models/best_12_rs_15_50n_discrete_cdmx"
+STORED_MODEL_DIR: str = "saved_models/best_15_50n_biflow_2"
 # STORED_MODEL_DIR: str = "saved_models/best_12_random_search_50n_11"
 CHECKPOINT_MODEL_DIR: str = f"{STORED_MODEL_DIR}/checkpoint/"
 # CHECKPOINT_MODEL_DIR: str = f"{STORED_MODEL_DIR}/checkpoint/train/"
@@ -98,11 +98,11 @@ finger_position_plot = lambda positions: lambda ax: ax.scatter(
     range(time_steps), positions[:, 0], positions[:, 1], s=10
 )
 
-plotter.plot_npz_control_points(
-    norm_train_polygons.take([0,3,12,16,19,22,26,28,29,37,39,40,46], axis=1),
-    title="Normalized Training Control Points",
-    plot_cb=finger_position_plot(norm_train_finger_positions),
-)
+# plotter.plot_npz_control_points(
+#     norm_train_polygons.take([0,3,12,16,19,22,26,28,29,37,39,40,46], axis=1),
+#     title="Normalized Training Control Points",
+#     plot_cb=finger_position_plot(norm_train_finger_positions),
+# )
 
 plotter.plot_npz_control_points(
     norm_train_polygons,
@@ -110,11 +110,11 @@ plotter.plot_npz_control_points(
     plot_cb=finger_position_plot(norm_train_finger_positions),
 )
 
-# plotter.plot_npz_control_points(
-#     norm_valid_polygons.take([0,6,7,9,16,20,24,25,33,34,38,39,43], axis=1),
-#     title="Normalized Validation Control Points",
-#     plot_cb=finger_position_plot(norm_valid_finger_positions),
-# )
+plotter.plot_npz_control_points(
+    norm_valid_polygons,
+    title="Normalized Validation Control Points",
+    plot_cb=finger_position_plot(norm_valid_finger_positions),
+)
 
 
 # plotter.plot_finger_force(norm_train_forces, title="Normalized Training Finger Force")
@@ -174,8 +174,8 @@ prev_model = keras.models.load_model(
 )
 model.setTeacherForcing(True)
 model.build(input_shape=[(None, 100, 2), (None, 100, 4)])  # init model weights
-model.set_weights(prev_model.get_weights())  # to use last model
-#model.load_weights(CHECKPOINT_MODEL_DIR)  # to use checkpoint
+#model.set_weights(prev_model.get_weights())  # to use last model
+model.load_weights(CHECKPOINT_MODEL_DIR)  # to use checkpoint
 print("Using stored model.")
 model.setTeacherForcing(False)
 print(

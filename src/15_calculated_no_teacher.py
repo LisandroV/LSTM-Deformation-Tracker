@@ -33,11 +33,11 @@ script_args = get_script_args()
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
 
-MODEL_NAME: str = "15_50n_biflow_3"
+MODEL_NAME: str = "15_e_tune_1_12"
 SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
 CHECKPOINT_MODEL_DIR: str = f"{SAVED_MODEL_DIR}/checkpoint/"
 
-PREV_MODEL_NAME: str = "15_50n_biflow_2"
+PREV_MODEL_NAME: str = "14_e_tune_1_12"
 PREV_MODEL_DIR: str = f"saved_models/best_{PREV_MODEL_NAME}"
 PREV_CHECKPOINT_MODEL_DIR: str = f"{PREV_MODEL_DIR}/checkpoint/"
 
@@ -206,7 +206,7 @@ if SHOULD_TRAIN_MODEL:
             [X_valid_cp, X_valid_finger],
             y_valid,
         ),
-        epochs=10000,
+        epochs=6000,
         callbacks=[tensorboard_cb, checkpoint_cb, PlotWeightsCallback(plot_freq=50)],
     )
 

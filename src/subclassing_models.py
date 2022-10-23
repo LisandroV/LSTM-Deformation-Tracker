@@ -77,17 +77,10 @@ class DeformationTrackerBiFlowModel(tf.keras.Model):
     def __init__(self, log_dir="./logs", **kwargs):
         super().__init__(kwargs)
         self.hidden1 = tf.keras.layers.SimpleRNN(
-            50,
+            12,
             return_sequences=True,
             input_shape=[None, 5],
             name="first_hidden",
-            kernel_initializer="random_normal",
-            bias_initializer="zeros",
-        )
-        self.hidden2 = tf.keras.layers.SimpleRNN(
-            50,
-            return_sequences=True,
-            name="second_hidden",
             kernel_initializer="random_normal",
             bias_initializer="zeros",
         )
@@ -113,9 +106,8 @@ class DeformationTrackerBiFlowModel(tf.keras.Model):
                 [control_point_input, finger_input]
             )
             hidden1 = self.hidden1(layer_input)
-            hidden2 = self.hidden2(hidden1)
             last_layer_input = tf.keras.layers.Concatenate()(
-                [control_point_input, hidden2]
+                [control_point_input, hidden1]
             )
             model_output = self.output_layer(last_layer_input)
             return model_output
@@ -135,14 +127,13 @@ class DeformationTrackerBiFlowModel(tf.keras.Model):
                 # tf.keras.backend.clear_session() # to solve this: https://stackoverflow.com/questions/66712301/creating-models-in-a-loop-makes-keras-increasingly-slower
                 next_layer_input = tf.keras.layers.Concatenate()([layer_output, finger_input[:,i:i+1,:]])
                 hidden1 = self.hidden1(next_layer_input)
-                hidden2 = self.hidden2(hidden1)
                 last_layer_input = tf.keras.layers.Concatenate()(
                     [
                     control_point_input[
                         :, :1, :
                     ],
                     # layer_output,
-                    hidden2
+                    hidden1
                     ]
                 )
                 layer_output = self.output_layer(last_layer_input)

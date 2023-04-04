@@ -77,7 +77,7 @@ class DeformationTrackerBiFlowModel(tf.keras.Model):
     def __init__(self, log_dir="./logs", **kwargs):
         super().__init__(kwargs)
         self.hidden1 = tf.keras.layers.SimpleRNN(
-            12,
+            6,
             return_sequences=True,
             input_shape=[None, 5],
             name="first_hidden",

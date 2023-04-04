@@ -33,11 +33,11 @@ script_args = get_script_args()
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
 
-MODEL_NAME: str = "15_e_tune_1_12"
+MODEL_NAME: str = "15_e_tune_1_6"
 SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
 CHECKPOINT_MODEL_DIR: str = f"{SAVED_MODEL_DIR}/checkpoint/"
 
-PREV_MODEL_NAME: str = "14_e_tune_1_12"
+PREV_MODEL_NAME: str = "14_e_tune_1_6"
 PREV_MODEL_DIR: str = f"saved_models/best_{PREV_MODEL_NAME}"
 PREV_CHECKPOINT_MODEL_DIR: str = f"{PREV_MODEL_DIR}/checkpoint/"
 

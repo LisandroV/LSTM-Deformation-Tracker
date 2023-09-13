@@ -33,9 +33,12 @@ script_args = get_script_args()
 
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
-MODEL_NAME: str = "14_50n_biflow"
+MODEL_NAME: str = "biflow_LSTM"
 SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
 SHOULD_TRAIN_MODEL: bool = script_args.train
+TRAINING_EPOCHS = 50 #6000
+
+
 
 
 # READ FORCE FILE --------------------------------------------------------------
@@ -46,7 +49,6 @@ validation_finger_force_file: str = os.path.join(
     VALIDATION_DATA_DIR, "finger_force.txt"
 )
 validation_forces: np.ndarray = read_finger_forces_file(validation_finger_force_file)
-
 
 # READ FINGER POSITION FILE ----------------------------------------------------
 train_finger_positions_file: str = os.path.join(TRAIN_DATA_DIR, "finger_position.txt")
@@ -61,7 +63,6 @@ validation_finger_positions: np.ndarray = read_finger_positions_file(
     valid_finger_positions_file
 )
 
-
 # READ CONTROL POINTS ----------------------------------------------------------
 train_cp_file: str = os.path.join(TRAIN_DATA_DIR, "fixed_control_points.npy")
 train_polygons = np.load(train_cp_file)
@@ -69,24 +70,29 @@ train_polygons = np.load(train_cp_file)
 valid_cp_file: str = os.path.join(VALIDATION_DATA_DIR, "fixed_control_points.npy")
 validation_polygons = np.load(valid_cp_file)
 
-# NORMALIZATION
+
+
+
+# NORMALIZATION ----------------------------------------------------------------
 norm_train_polygons = normalization.normalize_polygons(train_polygons)
 norm_train_finger_positions = normalization.normalize_finger_position(
     train_polygons, train_finger_positions
 )
 norm_train_forces = normalization.normalize_force(train_forces)
-norm_train_forces = np.array(
-    [0] * 11 + [1] * 38 + [-1] * 35 + [0] * 16
-)  # use a discrete function instead
+# norm_train_forces = np.array(
+#     [0] * 11 + [1] * 38 + [-1] * 35 + [0] * 16
+# )  # use a discrete function instead
 
 norm_valid_polygons = normalization.normalize_polygons(validation_polygons)
 norm_valid_finger_positions = normalization.normalize_finger_position(
     validation_polygons, validation_finger_positions
 )
 norm_valid_forces = normalization.normalize_force(validation_forces)
-norm_valid_forces = np.array(
-    [0] * 14 + [1] * 36 + [-1] * 36 + [0] * 14
-)  # use a discrete function instead
+# norm_valid_forces = np.array(
+#     [0] * 14 + [1] * 36 + [-1] * 36 + [0] * 14
+# )  # use a discrete function instead
+
+
 
 
 # PLOT DATA --------------------------------------------------------------------
@@ -100,6 +106,13 @@ origin_axis_plot = lambda ax: ax.plot(
 finger_position_plot = lambda positions: lambda ax: ax.scatter(
     range(time_steps), positions[:, 0], positions[:, 1], s=10
 )
+
+plotter.plot_finger_force(norm_train_forces, title="Normalized Training Finger Force")
+plotter.plot_finger_force(train_forces, title="Training Finger Force")
+
+plotter.plot_finger_force(norm_valid_forces, title="Normalized Validation Finger Force")
+plotter.plot_finger_force(validation_forces, title="Validation Finger Force")
+
 
 # CREATE DATASET ---------------------------------------------------------------
 mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_axis(
@@ -123,7 +136,7 @@ mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_ax
     norm_train_polygons, norm_train_finger_positions, norm_train_forces
 )
 
-# Data augmentation
+# DATA AUGMENTATION ------------------------------------------------------------
 X_train_cp = np.concatenate((X_train_center_sponge_cp, X_train_mirror_cp))
 X_train_finger = np.concatenate((X_train_center_sponge_finger, X_train_mirror_finger))
 y_train = np.concatenate((y_train_center_sponge, y_train_mirror))
@@ -133,18 +146,20 @@ X_valid_cp, X_valid_finger, y_valid = create_calculated_values_dataset(
 )
 
 
+
 # SETUP TENSORBOARD LOGS -------------------------------------------------------
 log_name = util_logs.get_log_filename(MODEL_NAME)
 tensorboard_cb = keras.callbacks.TensorBoard(
     log_dir=log_name, histogram_freq=100, write_graph=True
 )
-
-
 # EARLY STOPPING
 early_stopping_cb = keras.callbacks.EarlyStopping(patience=20, min_delta=0.0001)
 
-# MODEL CREATION --------------------------------------------------------------
 
+
+
+
+# MODEL CREATION --------------------------------------------------------------
 model = DeformationTrackerModel(log_dir=log_name)
 
 
@@ -161,10 +176,13 @@ if SHOULD_TRAIN_MODEL:
             [X_valid_cp, X_valid_finger],
             y_valid,
         ),
-        epochs=6000,
+        epochs=TRAINING_EPOCHS,
         callbacks=[tensorboard_cb, PlotWeightsCallback(plot_freq=50)],
         workers=4,
     )
+
+    import pdb
+    pdb.set_trace()
 
     save_best_model(model, SAVED_MODEL_DIR, [X_valid_cp, X_valid_finger], y_valid)
 else:
@@ -187,6 +205,8 @@ else:
         sys.exit(
             "Error:  There is no model saved.\n\tTo use the flag --train, the model has to be trained before."
         )
+
+
 
 
 # PREDICTION -------------------------------------------------------------------

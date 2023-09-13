@@ -77,7 +77,7 @@ def plot_finger_position(finger_position_data: np.ndarray) -> None:
 @plot_flag_decorator
 def plot_finger_force(finger_force_data, title="Finger force") -> None:
     """Plots the finger force through time."""
-    fig = plt.figure("Finger Force")
+    fig = plt.figure("Fuerza registrada al contacto")
     fig.suptitle(title)
     ax = fig.add_subplot(111)
 
@@ -85,8 +85,8 @@ def plot_finger_force(finger_force_data, title="Finger force") -> None:
     y = finger_force_data
     ax.plot(x, y)
 
-    ax.set_xlabel("time (steps)")
-    ax.set_ylabel("force")
+    ax.set_xlabel("Tiempo")
+    ax.set_ylabel("Fuerza")
     plt.show()
 
 

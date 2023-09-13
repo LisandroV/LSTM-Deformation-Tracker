@@ -208,7 +208,7 @@ def calculte_distances(control_points, finger_positions):
 
 # plygons shape: (100, 47, 2)
 def create_calculated_values_dataset(
-    polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray
+    polygons: np.ndarray, finger_positions: np.ndarray, finger_force: np.ndarray, step_size: int = 100
 ):
     """
     Copy of create_teacher_forcing_dataset but with this extra data:
@@ -219,14 +219,14 @@ def create_calculated_values_dataset(
     X_control_points = polygons.swapaxes(0, 1)  # shape: (47, 100, 2)
     distance_to_finger = calculte_distances(X_control_points, finger_positions)
     X_finger_data = np.array(
-        [np.append(finger_positions, finger_force.reshape(100, 1), axis=1)]
+        [np.append(finger_positions, finger_force.reshape(step_size, 1), axis=1)]
         * num_control_points
     )  # shape (47,100,3)
     X_finger_data = np.append(
-        X_finger_data, distance_to_finger.reshape(47, 100, 1), axis=2
+        X_finger_data, distance_to_finger.reshape(47, step_size, 1), axis=2
     )  # shape (47,100,4)
     # create y_data, shape: (47,100,2)
-    y_data = np.zeros((num_control_points, 100, 2))
+    y_data = np.zeros((num_control_points, step_size, 2))
     for contol_point_index in range(polygons.shape[1]):
         control_point_sequece = polygons[:, contol_point_index, :]
         y_data[contol_point_index, :-1] = control_point_sequece[1:]

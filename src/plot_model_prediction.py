@@ -104,6 +104,13 @@ finger_position_plot = lambda positions: lambda ax: ax.scatter(
 #     plot_cb=finger_position_plot(norm_train_finger_positions),
 # )
 
+
+plotter.plot_finger_force(norm_train_forces, title="Normalized Training Finger Force")
+plotter.plot_finger_force(train_forces, title="Training Finger Force")
+
+plotter.plot_finger_force(norm_valid_forces, title="Normalized Validation Finger Force")
+plotter.plot_finger_force(validation_forces, title="Validation Finger Force")
+
 plotter.plot_npz_control_points(
     norm_train_polygons,
     title="Normalized Training Control Points",
@@ -115,11 +122,6 @@ plotter.plot_npz_control_points(
     title="Normalized Validation Control Points",
     plot_cb=finger_position_plot(norm_valid_finger_positions),
 )
-
-
-# plotter.plot_finger_force(norm_train_forces, title="Normalized Training Finger Force")
-
-# plotter.plot_finger_force(norm_valid_forces, title="Normalized Validation Finger Force")
 
 
 # CREATE DATASET ---------------------------------------------------------------

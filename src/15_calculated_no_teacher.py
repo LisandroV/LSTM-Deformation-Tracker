@@ -33,15 +33,17 @@ script_args = get_script_args()
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
 
-MODEL_NAME: str = "15_50n_biflow_3"
+MODEL_NAME: str = "biflow_LSTM_2"
 SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
 CHECKPOINT_MODEL_DIR: str = f"{SAVED_MODEL_DIR}/checkpoint/"
 
-PREV_MODEL_NAME: str = "15_50n_biflow_2"
+PREV_MODEL_NAME: str = "biflow_LSTM"
 PREV_MODEL_DIR: str = f"saved_models/best_{PREV_MODEL_NAME}"
 PREV_CHECKPOINT_MODEL_DIR: str = f"{PREV_MODEL_DIR}/checkpoint/"
 
 SHOULD_TRAIN_MODEL: bool = script_args.train
+
+TRAINING_EPOCHS = 1500 #10000
 
 
 # READ FORCE FILE --------------------------------------------------------------
@@ -81,18 +83,18 @@ norm_train_finger_positions = normalization.normalize_finger_position(
     train_polygons, train_finger_positions
 )
 norm_train_forces = normalization.normalize_force(train_forces)
-norm_train_forces = np.array(
-    [0] * 11 + [1] * 38 + [-1] * 35 + [0] * 16
-)  # use a discrete function instead
+# norm_train_forces = np.array(
+#     [0] * 11 + [1] * 38 + [-1] * 35 + [0] * 16
+# )  # use a discrete function instead
 
 norm_valid_polygons = normalization.normalize_polygons(validation_polygons)
 norm_valid_finger_positions = normalization.normalize_finger_position(
     validation_polygons, validation_finger_positions
 )
 norm_valid_forces = normalization.normalize_force(validation_forces)
-norm_valid_forces = np.array(
-    [0] * 14 + [1] * 36 + [-1] * 36 + [0] * 14
-)  # use a discrete function instead
+# norm_valid_forces = np.array(
+#     [0] * 14 + [1] * 36 + [-1] * 36 + [0] * 14
+# )  # use a discrete function instead
 
 
 # PLOT DATA --------------------------------------------------------------------
@@ -206,7 +208,7 @@ if SHOULD_TRAIN_MODEL:
             [X_valid_cp, X_valid_finger],
             y_valid,
         ),
-        epochs=10000,
+        epochs=TRAINING_EPOCHS,
         callbacks=[tensorboard_cb, checkpoint_cb, PlotWeightsCallback(plot_freq=50)],
     )
 

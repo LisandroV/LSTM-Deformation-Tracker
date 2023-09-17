@@ -1,6 +1,12 @@
 from unicodedata import name
 import tensorflow as tf
 from functools import reduce
+import logging
+logging.basicConfig(
+    format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+    datefmt='%Y-%m-%d:%H:%M:%S',
+    level=logging.DEBUG
+)
 
 # CREATE RECURRENT MODEL -------------------------------------------------------
 class DeformationTrackerModel(tf.keras.Model):
@@ -76,7 +82,7 @@ class DeformationTrackerModel(tf.keras.Model):
 class DeformationTrackerBiFlowModel(tf.keras.Model):
     def __init__(self, log_dir="./logs", **kwargs):
         super().__init__(kwargs)
-        self.hidden1 = tf.keras.layers.SimpleRNN(
+        self.hidden1 = tf.keras.layers.LSTM(
             50,
             return_sequences=True,
             input_shape=[None, 5],
@@ -84,7 +90,7 @@ class DeformationTrackerBiFlowModel(tf.keras.Model):
             kernel_initializer="random_normal",
             bias_initializer="zeros",
         )
-        self.hidden2 = tf.keras.layers.SimpleRNN(
+        self.hidden2 = tf.keras.layers.LSTM(
             50,
             return_sequences=True,
             name="second_hidden",
@@ -108,7 +114,7 @@ class DeformationTrackerBiFlowModel(tf.keras.Model):
         control_point_input, finger_input = model_input
 
         if self.__use_teacher_forcing__:  # With teacher forcing
-            print("Using teacher forcing")
+            logging.info("Using teacher forcing")
             layer_input = tf.keras.layers.Concatenate()(
                 [control_point_input, finger_input]
             )
@@ -121,7 +127,7 @@ class DeformationTrackerBiFlowModel(tf.keras.Model):
             return model_output
 
         else:  # No teacher forcing
-            print("Not using teacher forcing")
+            logging.info("Not using teacher forcing")
             layer_output = control_point_input[
                 :, :1, :
             ]  # first control point of the seq

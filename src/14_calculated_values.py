@@ -36,7 +36,7 @@ VALIDATION_DATA_DIR: str = "data/sponge_longside"
 MODEL_NAME: str = "biflow_LSTM"
 SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
 SHOULD_TRAIN_MODEL: bool = script_args.train
-TRAINING_EPOCHS = 50 #6000
+TRAINING_EPOCHS = 1500 #6000
 
 
 

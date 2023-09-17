@@ -233,3 +233,9 @@ def create_calculated_values_dataset(
         y_data[contol_point_index, -1] = control_point_sequece[-1]
 
     return X_control_points, X_finger_data, y_data
+
+def merge_arrays(arr1: np.ndarray, arr2: np.ndarray):
+    """Merge arrays into ragged python list"""
+    ragged_list = arr1.tolist()
+    ragged_list.extend(arr2.tolist())
+    return ragged_list

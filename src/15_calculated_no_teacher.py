@@ -17,7 +17,7 @@ from tensorflow import keras
 from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
 from subclassing_models import DeformationTrackerBiFlowModel as DeformationTrackerModel
-from utils.dataset_creation import create_calculated_values_dataset, mirror_data_x_axis
+from utils.dataset_creation import create_calculated_values_dataset, mirror_data_x_axis, merge_arrays
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
 from utils.weight_plot_callback import PlotWeightsCallback
@@ -43,7 +43,7 @@ PREV_CHECKPOINT_MODEL_DIR: str = f"{PREV_MODEL_DIR}/checkpoint/"
 
 SHOULD_TRAIN_MODEL: bool = script_args.train
 
-TRAINING_EPOCHS = 1500 #10000
+TRAINING_EPOCHS = 6000 #10000
 
 
 # READ FORCE FILE --------------------------------------------------------------
@@ -151,13 +151,17 @@ mirrored_polygons, mirrored_finger_positions, mirrored_forces = mirror_data_x_ax
     X_train_center_sponge_finger,
     y_train_center_sponge,
 ) = create_calculated_values_dataset(
-    norm_train_polygons, norm_train_finger_positions, norm_train_forces
+    norm_train_polygons,#[:80],
+    norm_train_finger_positions,#[:80],
+    norm_train_forces,#[:80],
+    100#80
 )
 
 # Data augmentation
-X_train_cp = np.concatenate((X_train_center_sponge_cp, X_train_mirror_cp))
-X_train_finger = np.concatenate((X_train_center_sponge_finger, X_train_mirror_finger))
-y_train = np.concatenate((y_train_center_sponge, y_train_mirror))
+
+X_train_cp = tf.ragged.constant(merge_arrays(X_train_center_sponge_cp[:,:1,:], X_train_mirror_cp[:,:1,:]), ragged_rank=1)# select only first cp of each sequence
+X_train_finger = tf.ragged.constant(merge_arrays(X_train_center_sponge_finger, X_train_mirror_finger), ragged_rank=1)
+y_train = tf.ragged.constant(merge_arrays(y_train_center_sponge, y_train_mirror), ragged_rank=1)
 
 X_valid_cp, X_valid_finger, y_valid = create_calculated_values_dataset(
     norm_valid_polygons, norm_valid_finger_positions, norm_valid_forces
@@ -198,11 +202,11 @@ if SHOULD_TRAIN_MODEL:
         PREV_MODEL_DIR,
         custom_objects={"DeformationTrackerModel": DeformationTrackerModel},
     )
-    model.build(input_shape=[(None, 100, 2), (None, 100, 4)])  # init model weights
+    model.build(input_shape=[(None, None, 2), (None, None, 4)])  # init model weights
     model.set_weights(prev_model.get_weights())
 
     history = model.fit(
-        [X_train_cp[:, :1, :], X_train_finger],
+        [X_train_cp, X_train_finger],
         y_train,
         validation_data=(
             [X_valid_cp, X_valid_finger],

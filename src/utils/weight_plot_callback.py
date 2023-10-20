@@ -8,7 +8,7 @@ import itertools
 import tensorflow as tf
 import io
 
-from memory_profiler import profile
+#from memory_profiler import profile
 
 # @profile # was used to investigate memory leak
 def create_weight_matrix_image(weights_matrix, image_name):

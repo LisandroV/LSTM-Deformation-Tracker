@@ -14,6 +14,7 @@ from functools import reduce
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # to supress tf warnings
 import tensorflow as tf
 from tensorflow import keras
+import keras_tuner
 
 from read_data.finger_force_reader import read_finger_forces_file
 from read_data.finger_position_reader import read_finger_positions_file
@@ -33,8 +34,8 @@ script_args = get_script_args()
 
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
-MODEL_NAME: str = "biflow_LSTM"
-SAVED_MODEL_DIR: str = f"saved_models/best_{MODEL_NAME}"
+MODEL_NAME: str = "final_with"
+SAVED_MODEL_DIR: str = f"saved_models_final/best_{MODEL_NAME}"
 SHOULD_TRAIN_MODEL: bool = script_args.train
 TRAINING_EPOCHS = 1500 #6000
 
@@ -150,7 +151,6 @@ def set_dataset_values():
     return X_train_cp, X_train_finger, y_train, X_valid_cp, X_valid_finger, y_valid
 
 X_train_cp, X_train_finger, y_train, X_valid_cp, X_valid_finger, y_valid = set_dataset_values()
-#import ipdb;ipdb.set_trace();
 
 # SETUP TENSORBOARD LOGS -------------------------------------------------------
 log_name = util_logs.get_log_filename(MODEL_NAME)
@@ -159,6 +159,63 @@ tensorboard_cb = keras.callbacks.TensorBoard(
 )
 # EARLY STOPPING
 early_stopping_cb = keras.callbacks.EarlyStopping(patience=20, min_delta=0.0001)
+
+
+# RANDOM SEARCH ----------------------------------------------------------------------------
+def create_model() -> DeformationTrackerModel:
+    model = DeformationTrackerModel(log_dir=log_name)
+    model.setTeacherForcing(True)
+
+    return model
+
+def build_model(hp):
+    model: DeformationTrackerModel = create_model()
+    learning_rate = hp.Float("lr", min_value=1e-4, max_value=2e-2, sampling="log")
+    epsilon = hp.Float("epsilon", min_value=1e-7, max_value=1e-5, sampling="log")
+    beta_1 = hp.Float("beta_1", min_value=0.7, max_value=0.95)
+    model.compile(
+        optimizer=keras.optimizers.legacy.Adam(
+            learning_rate=learning_rate, beta_1=beta_1, epsilon=epsilon
+        ),
+        loss="mse",
+    )
+    model.setTeacherForcing(True)
+
+    return model
+
+
+tuner = keras_tuner.RandomSearch(
+    hypermodel=build_model,
+    objective="val_loss",
+    max_trials=120,
+    executions_per_trial=1,
+    overwrite=True,
+    directory="saved_models_final",
+    project_name="random_search",
+)
+tuner.search_space_summary()
+
+tuner.search(
+    [X_train_cp, X_train_finger],
+    y_train,
+    epochs=12000,
+    validation_data=(
+        [X_valid_cp, X_valid_finger],
+        y_valid,
+    ),
+    callbacks=[tensorboard_cb,] #checkpoint_train_cb, checkpoint_valid_cb],
+)
+models = tuner.get_best_models(num_models=2)
+best_model = models[0]
+save_best_model(best_model, SAVED_MODEL_DIR, [X_valid_cp, X_valid_finger], y_valid)
+
+# Get Ratings for analysis graph ----------
+models = tuner.get_best_models(num_models=120)
+ratings = []
+for i,m in enumerate(models):
+   ratings.append({'rating': i, **m.get_compile_config()['optimizer']['config']})
+print(ratings)
+print(tuner.results_summary()) # To get the score of the 10 best models
 
 
 # MODEL CREATION --------------------------------------------------------------

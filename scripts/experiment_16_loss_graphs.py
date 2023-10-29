@@ -64,31 +64,78 @@ def format_int(num):
     digits =len(str(num))
     return '0'*(3 - digits) + str(num)
 
-if __name__ == "__main__":
-    path = "/Users/ndroid/Documents/tesis/repos/Deformation-Tracker/logs_final/final_with_2023_10_20-00_53_37/{}/execution0/validation"#/events.out.tfevents.1697834025.hybris.local.81912.268.v2"
 
+def get_log_summary(path):
+    """
+        Returns all the Y values from a given tensorboard log path
+        * y_mean
+        * y_std
+        * y_min
+    """
+    summary = {}
     all_ys = []
     for i in range(120):
         y = get_smooth_y(path.format(format_int(i)))
         all_ys.append(y)
         print(f"Processed experiment #{i}")
 
-    y_mean = np.stack(all_ys).mean(axis=0)
-    y_std = np.stack(all_ys).std(axis=0)
-    y_min = np.stack(all_ys).min(axis=0)
+    summary['all_ys'] = all_ys
+    summary['y_mean'] = np.stack(all_ys).mean(axis=0)
+    summary['y_std'] = np.stack(all_ys).std(axis=0)
+    summary['y_min'] = np.stack(all_ys).min(axis=0)
+
+    return summary
+
+def save_summary(file_name, summary):
+    with open(f"scripts/results/{file_name}", 'wb') as f:
+        np.save(f, summary['all_ys'])
+        np.save(f, summary['y_mean'])
+        np.save(f, summary['y_std'])
+        np.save(f, summary['y_min'])
+
+def load_summary(file_name):
+    with open(f"scripts/results/{file_name}", 'rb') as f:
+        summary = {}
+        summary['all_ys'] = np.load(f)
+        summary['y_mean'] = np.load(f)
+        summary['y_std'] = np.load(f)
+        summary['y_min'] = np.load(f)
+
+        return summary
+
+if __name__ == "__main__":
+    train_path = "/Users/ndroid/Documents/tesis/repos/Deformation-Tracker/logs_final/final_with_2023_10_20-00_53_37/{}/execution0/train"
+    validation_path = "/Users/ndroid/Documents/tesis/repos/Deformation-Tracker/logs_final/final_with_2023_10_20-00_53_37/{}/execution0/validation"
+
+    try:
+        train_summary = load_summary("train_graph_summary.npy")
+        validation_summary = load_summary("validation_graph_summary.npy")
+        print("Loaded summary files.")
+    except:
+        print("Error loading summary files, calculating summary.")
+        train_summary = get_log_summary(train_path)
+        save_summary("train_graph_summary.npy", train_summary)
+        validation_summary = get_log_summary(validation_path)
+        save_summary("validation_graph_summary.npy", validation_summary)
 
     x = np.arange(12000)
 
     fig, ax =plt.subplots(1)
-    ax.plot(x, y_mean, lw=2, label='mean population 1', color='blue')
 
-    best_train_y = get_tensorboard_y_data(path.format{'089'}) # all_ys[89]
-    #ax.plot(x, all_ys[89], lw=2, label='mean population 1', color='red')
-    ax.plot(x, all_ys[89], lw=2, label='mean population 1', color='red')
-    ax.fill_between(x, y_mean+y_std, y_min, facecolor='blue', alpha=0.4)
+    # Train plot
+    train_best_y =  train_summary['all_ys'][89] # get_tensorboard_y_data(path.format('089'))
+    ax.plot(x, train_summary['y_mean'], lw=2, label='Promedio en conjunto de entrenamiento', color='dodgerblue')
+    #ax.plot(x, train_best_y, lw=2, label='mean population 1', color='red')
+    ax.fill_between(x, train_summary['y_mean']+train_summary['y_std'], train_summary['y_min'], facecolor='dodgerblue', alpha=0.4)
 
+    # Validation plot
+    validation_best_y =  validation_summary['all_ys'][89] # get_tensorboard_y_data(path.format('089'))
+    ax.plot(x, validation_summary['y_mean'], lw=2, label='Promedio en conjunto de validacion', color='darkorange')
+    ax.plot(x, validation_best_y, lw=2, label='Mejor resultado en validación', color='magenta')
+    ax.fill_between(x, validation_summary['y_mean']+validation_summary['y_std'], validation_summary['y_min'], facecolor='orange', alpha=0.4)
 
-    #ax.plot(x, y)
+    plt.xlabel("Épocas")
+    plt.ylabel("Error (MSE)")
+    ax.legend()
     plt.yscale("log")
     plt.show()
-

@@ -1,6 +1,7 @@
 # ignore related to this project
 logs/
 .DS_Store
+scripts/results
 
 
 

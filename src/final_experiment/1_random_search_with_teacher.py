@@ -1,15 +1,11 @@
 """
-In this experiment we will give the model calculated values to learn from, like the distance between the finger and the control point
-
-This experiment is based on Experiment-10
-
-Results: ?
+    Random search using teacher forcing to find the best parameters for Adam.
 """
-
 import os
 import numpy as np
 import sys
-from functools import reduce
+import time
+sys.path.append('./src')
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # to supress tf warnings
 import tensorflow as tf
@@ -34,16 +30,18 @@ script_args = get_script_args()
 
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
-MODEL_NAME: str = "final_with"
-SAVED_MODEL_DIR: str = f"saved_models_final/best_{MODEL_NAME}"
+MODEL_NAME: str = "random_search_with_teacher"
+SAVED_MODEL_DIR: str = f"src/final_experiment/saved_models/best_{MODEL_NAME}"
+TRIAL_NAME = time.strftime("experiment_%Y_%m_%d-%H_%M_%S")
+LOGS_DIR = f"src/final_experiment/logs/random_search_with_teacher/{TRIAL_NAME}"
 SHOULD_TRAIN_MODEL: bool = script_args.train
-TRAINING_EPOCHS = 1500 #6000
+TRAINING_EPOCHS = 12000
 
 
-X_train_cp, X_train_finger, y_train = None, None, None
-X_valid_cp, X_valid_finger, y_valid = None, None, None
-
-def set_dataset_values():
+def create_datasets():
+    """
+        Returns training and validation datasets
+    """
     # READ FORCE FILE --------------------------------------------------------------
     train_finger_force_file: str = os.path.join(TRAIN_DATA_DIR, "finger_force.txt")
     train_forces: np.ndarray = read_finger_forces_file(train_finger_force_file)
@@ -82,19 +80,12 @@ def set_dataset_values():
         train_polygons, train_finger_positions
     )
     norm_train_forces = normalization.normalize_force(train_forces)
-    # norm_train_forces = np.array(
-    #     [0] * 11 + [1] * 38 + [-1] * 35 + [0] * 16
-    # )  # use a discrete function instead
 
     norm_valid_polygons = normalization.normalize_polygons(validation_polygons)
     norm_valid_finger_positions = normalization.normalize_finger_position(
         validation_polygons, validation_finger_positions
     )
     norm_valid_forces = normalization.normalize_force(validation_forces)
-    # norm_valid_forces = np.array(
-    #     [0] * 14 + [1] * 36 + [-1] * 36 + [0] * 14
-    # )  # use a discrete function instead
-
 
 
 
@@ -140,22 +131,29 @@ def set_dataset_values():
     )
 
     # DATA AUGMENTATION ------------------------------------------------------------
-    X_train_cp = np.concatenate((X_train_center_sponge_cp, X_train_mirror_cp))
-    X_train_finger = np.concatenate((X_train_center_sponge_finger, X_train_mirror_finger))
-    y_train = np.concatenate((y_train_center_sponge, y_train_mirror))
+    train_dataset = {}
+    train_dataset['X_control_points'] = np.concatenate((X_train_center_sponge_cp, X_train_mirror_cp))
+    train_dataset['X_finger'] = np.concatenate((X_train_center_sponge_finger, X_train_mirror_finger))
+    train_dataset['Y'] = np.concatenate((y_train_center_sponge, y_train_mirror))
 
-    X_valid_cp, X_valid_finger, y_valid = create_calculated_values_dataset(
+    validation_dataset = {}
+    (
+        validation_dataset['X_control_points'],
+        validation_dataset['X_finger'],
+        validation_dataset['Y']
+    ) = create_calculated_values_dataset(
         norm_valid_polygons, norm_valid_finger_positions, norm_valid_forces
     )
 
-    return X_train_cp, X_train_finger, y_train, X_valid_cp, X_valid_finger, y_valid
+    return train_dataset, validation_dataset
 
-X_train_cp, X_train_finger, y_train, X_valid_cp, X_valid_finger, y_valid = set_dataset_values()
+train_dataset, validation_dataset = create_datasets()
 
 # SETUP TENSORBOARD LOGS -------------------------------------------------------
-log_name = util_logs.get_log_filename(MODEL_NAME)
 tensorboard_cb = keras.callbacks.TensorBoard(
-    log_dir=log_name, histogram_freq=100, write_graph=True
+    log_dir=LOGS_DIR,
+    histogram_freq=100,
+    write_graph=True
 )
 # EARLY STOPPING
 early_stopping_cb = keras.callbacks.EarlyStopping(patience=20, min_delta=0.0001)
@@ -163,7 +161,7 @@ early_stopping_cb = keras.callbacks.EarlyStopping(patience=20, min_delta=0.0001)
 
 # RANDOM SEARCH ----------------------------------------------------------------------------
 def create_model() -> DeformationTrackerModel:
-    model = DeformationTrackerModel(log_dir=log_name)
+    model = DeformationTrackerModel(log_dir=LOGS_DIR)
     model.setTeacherForcing(True)
 
     return model
@@ -190,24 +188,29 @@ tuner = keras_tuner.RandomSearch(
     max_trials=120,
     executions_per_trial=1,
     overwrite=True,
-    directory="saved_models_final",
-    project_name="random_search",
+    directory="src/final_experiment/saved_models/random_search_with_teacher",
+    project_name=TRIAL_NAME
 )
 tuner.search_space_summary()
 
 tuner.search(
-    [X_train_cp, X_train_finger],
-    y_train,
-    epochs=12000,
+    [train_dataset['X_control_points'], train_dataset['X_finger']],
+    train_dataset['Y'],
+    epochs=TRAINING_EPOCHS,
     validation_data=(
-        [X_valid_cp, X_valid_finger],
-        y_valid,
+        [validation_dataset['X_control_points'], validation_dataset['X_finger']],
+        validation_dataset['Y'],
     ),
     callbacks=[tensorboard_cb,] #checkpoint_train_cb, checkpoint_valid_cb],
 )
 models = tuner.get_best_models(num_models=2)
 best_model = models[0]
-save_best_model(best_model, SAVED_MODEL_DIR, [X_valid_cp, X_valid_finger], y_valid)
+save_best_model(
+    best_model,
+    SAVED_MODEL_DIR,
+    [validation_dataset['X_control_points'], validation_dataset['X_finger']],
+    validation_dataset['Y'],
+)
 
 # Get Ratings for analysis graph ----------
 models = tuner.get_best_models(num_models=120)
@@ -216,104 +219,3 @@ for i,m in enumerate(models):
    ratings.append({'rating': i, **m.get_compile_config()['optimizer']['config']})
 print(ratings)
 print(tuner.results_summary()) # To get the score of the 10 best models
-
-
-# MODEL CREATION --------------------------------------------------------------
-model = DeformationTrackerModel(log_dir=log_name)
-
-
-model.compile(loss="mse", optimizer="adam")
-
-
-# TRAIN ------------------------------------------------------------------------
-if SHOULD_TRAIN_MODEL:
-    model.setTeacherForcing(True)
-    history = model.fit(
-        [X_train_cp, X_train_finger],
-        y_train,
-        validation_data=(
-            [X_valid_cp, X_valid_finger],
-            y_valid,
-        ),
-        epochs=TRAINING_EPOCHS,
-        callbacks=[tensorboard_cb, PlotWeightsCallback(plot_freq=50)],
-        workers=4,
-    )
-
-    import pdb
-    pdb.set_trace()
-
-    save_best_model(model, SAVED_MODEL_DIR, [X_valid_cp, X_valid_finger], y_valid)
-else:
-    try:
-        prev_model = keras.models.load_model(
-            SAVED_MODEL_DIR,
-            custom_objects={"DeformationTrackerModel": DeformationTrackerModel},
-        )
-        model.build(input_shape=[(None, 100, 2), (None, 100, 4)])  # init model weights
-        model.set_weights(prev_model.get_weights())
-        print("Using stored model.")
-        model.setTeacherForcing(True)
-        print(
-            f"Stored model train loss: {model.evaluate([X_train_cp, X_train_finger],y_train)}"
-        )
-        print(
-            f"Stored model valid loss: {model.evaluate([X_valid_cp, X_valid_finger], y_valid)}"
-        )
-    except:
-        sys.exit(
-            "Error:  There is no model saved.\n\tTo use the flag --train, the model has to be trained before."
-        )
-
-
-
-
-# PREDICTION -------------------------------------------------------------------
-def show_prediction_graphs():
-    # ONE-STEP PREDICTION
-    y_pred = model.predict([X_train_center_sponge_cp, X_train_center_sponge_finger])
-    predicted_polygons = y_pred.swapaxes(0, 1)
-
-    plotter.plot_npz_control_points(
-        predicted_polygons[1:],
-        title="E14: One-Step Prediction On Train Set",
-        plot_cb=finger_position_plot(norm_train_finger_positions),
-    )
-
-
-    # PREDICT ON VALIDATION SET
-    y_pred = model.predict([X_valid_cp, X_valid_finger])
-    predicted_polygons = y_pred.swapaxes(0, 1)
-
-    plotter.plot_npz_control_points(
-        predicted_polygons[1:],
-        title="E14: One-Step Prediction On Validation Set",
-        plot_cb=finger_position_plot(norm_valid_finger_positions),
-    )
-
-
-    # MULTIPLE-STEP PREDICTION
-    model.setTeacherForcing(False)
-
-    y_pred = model.predict(
-        [X_train_center_sponge_cp[:, :1, :], X_train_center_sponge_finger]
-    )
-    predicted_polygons = y_pred.swapaxes(0, 1)
-
-    plotter.plot_npz_control_points(
-        predicted_polygons[1:],
-        title="E14: Multiple-Step Prediction On Train Set",
-        plot_cb=finger_position_plot(norm_train_finger_positions),
-    )
-
-    # PREDICT ON VALIDATION SET
-    y_pred = model.predict([X_valid_cp[:, :1, :], X_valid_finger])
-    predicted_polygons = y_pred.swapaxes(0, 1)
-
-    plotter.plot_npz_control_points(
-        predicted_polygons[1:],
-        title="E14: Multiple-Step Prediction On Validation Set",
-        plot_cb=finger_position_plot(norm_valid_finger_positions),
-    )
-
-# show_prediction_graphs()

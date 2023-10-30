@@ -109,12 +109,31 @@ def plot_npz_control_points(
     t = np.arange(0, np.shape(control_points)[0])
     for i in values:
         colorVal = scalarMap.to_rgba(values[i])
-        ax.plot(t, control_points[:, i, 0], control_points[:, i, 1], color=colorVal)
+        ax.plot(t, control_points[:, i, 0], control_points[:, i, 1]*-1, color=colorVal, alpha=0.5)
 
     if plot_cb is not None:
         plot_cb(ax)
 
-    ax.set_xlabel("time (steps)")
-    ax.set_ylabel("x (pixels)")
-    ax.set_zlabel("y (pixels)")
+    ax.set_xlabel("tiempo")
+    ax.set_ylabel("x")
+    ax.set_zlabel("y")
+    plt.show()
+
+
+@plot_flag_decorator
+def scatter_plot(
+    control_points, title="Scatter plot", plot_cb=None, finger_position=None
+) -> None:
+    """Plots the trajectories of the control points through time."""
+    fig = plt.figure(title)
+    fig.suptitle(title)
+    ax = fig.add_subplot(111)
+
+    ax.scatter(control_points[:,0], control_points[:,1]*-1, color='red', s=30)
+
+    if finger_position is not None:
+        ax.scatter(finger_position[0], finger_position[1]*-1, color='dodgerblue', s=130)
+
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
     plt.show()

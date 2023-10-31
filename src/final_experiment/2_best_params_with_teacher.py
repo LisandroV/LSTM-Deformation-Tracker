@@ -31,7 +31,7 @@ CHECKPOINT_MODEL_DIR: str = f"{SAVED_MODEL_DIR}/checkpoint/"
 TRIAL_NAME = time.strftime("experiment_%Y_%m_%d-%H_%M_%S")
 LOGS_DIR = f"src/final_experiment/logs/{MODEL_NAME}/{TRIAL_NAME}"
 SHOULD_TRAIN_MODEL: bool = script_args.train
-TRAINING_EPOCHS = 36000
+TRAINING_EPOCHS = 12000
 
 
 train_dataset, validation_dataset = create_datasets()
@@ -61,9 +61,9 @@ model.setTeacherForcing(True)
 
 model.compile(
     optimizer=keras.optimizers.legacy.Adam(
-        learning_rate=0.00403821286929431,
-        beta_1=0.8729192713558038,
-        epsilon=8.485455124521461e-07
+        learning_rate=0.004773385573290485,
+        beta_1=0.9177266177579712,
+        epsilon=1.5462747018467993e-06
     ),
     loss="mse",
 )
@@ -76,7 +76,7 @@ history = model.fit(
         [validation_dataset['X_control_points'], validation_dataset['X_finger']],
         validation_dataset['Y'],
     ),
-    callbacks=[tensorboard_cb, checkpoint_cb ],
+    callbacks=[tensorboard_cb, checkpoint_cb]
 )
 
 save_best_model(

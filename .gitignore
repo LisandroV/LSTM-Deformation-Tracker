@@ -2,7 +2,8 @@
 logs/
 .DS_Store
 scripts/results
-
+src/final_experiment/saved_models/
+tmp/
 
 
 # Byte-compiled / optimized / DLL files

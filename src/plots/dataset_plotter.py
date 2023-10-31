@@ -134,6 +134,13 @@ def scatter_plot(
     if finger_position is not None:
         ax.scatter(finger_position[0], finger_position[1]*-1, color='dodgerblue', s=130)
 
+    if plot_cb is not None:
+        plot_cb(ax)
+
+    # link points with line
+    ax.plot(control_points[:,0], control_points[:,1]*-1, color='black', alpha=0.5)
+
     ax.set_xlabel("x")
     ax.set_ylabel("y")
+
     plt.show()

@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 matplotlib.use("QtAgg")
 
 tf_size_guidance = {
-    'tensors': 12000 # Loading too much data is slow...
+    'tensors': 12000
 }
 
 def get_tensorboard_y_data(path):
@@ -87,14 +87,15 @@ def get_log_summary(path):
     return summary
 
 def save_summary(file_name, summary):
-    with open(f"scripts/results/{file_name}", 'wb') as f:
+    # must create this dir before using
+    with open(f"./src/final_experiment/tmp/1_random_search/{file_name}", 'wb') as f:
         np.save(f, summary['all_ys'])
         np.save(f, summary['y_mean'])
         np.save(f, summary['y_std'])
         np.save(f, summary['y_min'])
 
 def load_summary(file_name):
-    with open(f"scripts/results/{file_name}", 'rb') as f:
+    with open(f"./src/final_experiment/tmp/1_random_search/{file_name}", 'rb') as f:
         summary = {}
         summary['all_ys'] = np.load(f)
         summary['y_mean'] = np.load(f)
@@ -104,8 +105,8 @@ def load_summary(file_name):
         return summary
 
 if __name__ == "__main__":
-    train_path = "/Users/ndroid/Documents/tesis/repos/Deformation-Tracker/logs_final/final_with_2023_10_20-00_53_37/{}/execution0/train"
-    validation_path = "/Users/ndroid/Documents/tesis/repos/Deformation-Tracker/logs_final/final_with_2023_10_20-00_53_37/{}/execution0/validation"
+    train_path = "/Users/ndroid/Documents/tesis/repos/Deformation-Tracker/src/final_experiment/logs/random_search_with_teacher/experiment_2023_10_29-23_54_12/{}/execution0/train"
+    validation_path = "/Users/ndroid/Documents/tesis/repos/Deformation-Tracker/src/final_experiment/logs/random_search_with_teacher/experiment_2023_10_29-23_54_12/{}/execution0/validation"
 
     try:
         train_summary = load_summary("train_graph_summary.npy")
@@ -123,15 +124,15 @@ if __name__ == "__main__":
     fig, ax =plt.subplots(1)
 
     # Train plot
-    train_best_y =  train_summary['all_ys'][89] # get_tensorboard_y_data(path.format('089'))
+    train_best_y =  train_summary['all_ys'][104] # get_tensorboard_y_data(path.format('089'))
     ax.plot(x, train_summary['y_mean'], lw=2, label='Promedio en conjunto de entrenamiento', color='dodgerblue')
     #ax.plot(x, train_best_y, lw=2, label='mean population 1', color='red')
     ax.fill_between(x, train_summary['y_mean']+train_summary['y_std'], train_summary['y_min'], facecolor='dodgerblue', alpha=0.4)
 
     # Validation plot
-    validation_best_y =  validation_summary['all_ys'][89] # get_tensorboard_y_data(path.format('089'))
+    validation_best_y =  validation_summary['all_ys'][104] # get_tensorboard_y_data(path.format('089'))
     ax.plot(x, validation_summary['y_mean'], lw=2, label='Promedio en conjunto de validacion', color='darkorange')
-    ax.plot(x, validation_best_y, lw=2, label='Mejor resultado en validación', color='magenta')
+    ax.plot(x, validation_best_y, lw=2, label='Mejor resultado en conjunto de validación', color='magenta')
     ax.fill_between(x, validation_summary['y_mean']+validation_summary['y_std'], validation_summary['y_min'], facecolor='orange', alpha=0.4)
 
     plt.xlabel("Épocas")

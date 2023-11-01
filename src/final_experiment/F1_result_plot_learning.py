@@ -14,8 +14,8 @@ tf_size_guidance = {
     'tensors': 12000
 }
 
-def get_tensorboard_y_data(path):
-    event_acc = ea.EventAccumulator(path, tf_size_guidance)
+def get_tensorboard_y_data(path, data_size: int):
+    event_acc = ea.EventAccumulator(path, {'tensors': data_size})
     event_acc.Reload()
     #print(event_acc.Tags()) # Show all tags in the log file
     tensor_events = event_acc.Reload().Tensors('epoch_loss')
@@ -42,9 +42,9 @@ def tensorboard_smooth(scalars: list[float], weight: float) -> list[float]:
 
     return smoothed
 
-def get_smooth_y(path):
-    y = get_tensorboard_y_data(path)
-    y_smooth = tensorboard_smooth(y, 0.999)
+def get_smooth_y(path, data_size=12000, smooth_ratio=0.999):
+    y = get_tensorboard_y_data(path, data_size)
+    y_smooth = tensorboard_smooth(y, smooth_ratio)
 
     return y_smooth
 

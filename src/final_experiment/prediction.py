@@ -32,7 +32,7 @@ STORED_MODEL_DIR: str = "src/final_experiment/saved_models/best_best_params_with
 #STORED_MODEL_DIR: str = "src/final_experiment/saved_models/best_random_search_with_teacher/" #5.74
 CHECKPOINT_MODEL_DIR: str = f"{STORED_MODEL_DIR}/checkpoint/"
 
-def save_scatter_plot( control_points, trial_name,name='X', plot_cb=None, finger_position=None):
+def save_scatter_plot(control_points, trial_name,name='X', finger_position=None):
     """Plots the trajectories of the control points through time."""
     title = f"Prediction #{str(name)}"
     fig = plt.figure(title)
@@ -43,9 +43,6 @@ def save_scatter_plot( control_points, trial_name,name='X', plot_cb=None, finger
 
     if finger_position is not None:
         ax.scatter(finger_position[0], finger_position[1]*-1, color='dodgerblue', s=130)
-
-    if plot_cb is not None:
-        plot_cb(ax)
 
     # link points with line
     ax.plot(control_points[:,0], control_points[:,1]*-1, color='black', alpha=0.5)
@@ -61,15 +58,15 @@ def save_scatter_plot( control_points, trial_name,name='X', plot_cb=None, finger
     plt.savefig(f"./src/final_experiment/tmp/2_prediction/{trial_name}/{name}.png")
     plt.close(fig)
 
-def save_prediction_images(prediction, finger_position):
-    poligon_indexes = list(concave_hull_indexes(prediction, length_threshold=0.05,))
+def save_prediction_images(prediction, finger_positions):
+    poligon_indexes = list(concave_hull_indexes(prediction[:,0,:], length_threshold=0.05,))
     poligon_indexes.append(poligon_indexes[0])
     trial_name = time.strftime("%Y_%m_%d-%H_%M_%S")
     for i in range(100):
         save_scatter_plot(
-            validation_dataset['X_control_points'][:,i,:].take(poligon_indexes,axis=0),
+            prediction[:,i,:].take(poligon_indexes,axis=0),
             trial_name,
-            finger_position = validation_dataset['finger_position'][i,:],
+            finger_position = finger_positions[i,:],
             name=i
         )
 
@@ -131,18 +128,6 @@ print(f"Stored model loss on validation set: {validation_loss}")
 # Stored model loss on training set: 5.08580487803556e-05
 # Stored model loss on validation set: 5.714035069104284e-05
 
-# poligon_indexes = list(concave_hull_indexes(validation_dataset['X_control_points'], length_threshold=0.05,))
-# poligon_indexes.append(poligon_indexes[0])
-# trial_name = time.strftime("%Y_%m_%d-%H_%M_%S")
-# for i in range(100):
-#     save_scatter_plot(
-#         validation_dataset['X_control_points'][:,i,:].take(poligon_indexes,axis=0),
-#         trial_name,
-#         finger_position = validation_dataset['finger_position'][i,:],
-#         name=i
-#     )
-
-
 # PREDICTION -------------------------------------------------------------------
 
 # ONE-STEP PREDICTION
@@ -152,25 +137,17 @@ finger_position_plot = lambda positions: lambda ax: ax.scatter(
     range(100), positions[:, 0], positions[:, 1]*-1, s=10
 )
 
+
 y_pred = model.predict([validation_dataset['X_control_points'], validation_dataset['X_finger']])
-import ipdb;ipdb.set_trace();
-predicted_polygons = y_pred.swapaxes(0, 1)
+# y_pred (47,100,2)
+save_prediction_images(y_pred, validation_dataset['X_finger'][1,:,:2])
 
+#predicted_polygons = y_pred.swapaxes(0, 1)
 
-
-
-# PREDICTION ---------------------------------------------------------------------------------
-
-# plotter.plot_npz_control_points(predicted_polygons, plot_cb=finger_position_plot(validation_dataset['finger_position']))
 
 
 # MULTIPLE-STEP PREDICTION
-# model.setTeacherForcing(False)
+model.setTeacherForcing(False)
 
-# finger_position_plot = lambda positions: lambda ax: ax.scatter(
-#     range(100), positions[:, 0], positions[:, 1]*-1, s=10
-# )
-
-# y_pred = model.predict([validation_dataset['X_control_points'][:,:1,:], validation_dataset['X_finger']])
-# predicted_polygons = y_pred.swapaxes(0, 1)
-# plotter.plot_npz_control_points(predicted_polygons, plot_cb=finger_position_plot(validation_dataset['finger_position']))
+y_pred = model.predict([validation_dataset['X_control_points'][:,:1,:], validation_dataset['X_finger']])
+save_prediction_images(y_pred, validation_dataset['X_finger'][1,:,:2])

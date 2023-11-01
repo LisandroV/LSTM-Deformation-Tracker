@@ -133,6 +133,7 @@ class DeformationTrackerBiFlowModel(tf.keras.Model):
             # )
             for i in range(100):
                 # tf.keras.backend.clear_session() # to solve this: https://stackoverflow.com/questions/66712301/creating-models-in-a-loop-makes-keras-increasingly-slower
+                # FIXME: distance_to_finger = # use calculte_distances()
                 next_layer_input = tf.keras.layers.Concatenate()([layer_output, finger_input[:,i:i+1,:]])
                 hidden1 = self.hidden1(next_layer_input)
                 hidden2 = self.hidden2(hidden1)

@@ -16,7 +16,6 @@ from subclassing_models import DeformationTrackerBiFlowModel as DeformationTrack
 from utils.model_updater import save_best_model
 from utils.script_arguments import get_script_args
 from utils.weight_plot_callback import PlotWeightsCallback
-import plots.dataset_plotter as plotter
 from dataset import create_datasets
 
 np.random.seed(42)
@@ -82,11 +81,11 @@ tuner.search_space_summary()
 tuner.search(
     [train_dataset['X_control_points'], train_dataset['X_finger']],
     train_dataset['Y'],
-    epochs=TRAINING_EPOCHS,
     validation_data=(
         [validation_dataset['X_control_points'], validation_dataset['X_finger']],
         validation_dataset['Y'],
     ),
+    epochs=TRAINING_EPOCHS,
     callbacks=[tensorboard_cb,] #checkpoint_train_cb, checkpoint_valid_cb],
 )
 models = tuner.get_best_models(num_models=2)

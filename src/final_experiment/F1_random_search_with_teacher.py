@@ -30,6 +30,7 @@ SAVED_MODEL_DIR: str = f"src/final_experiment/saved_models/best_{MODEL_NAME}"
 TRIAL_NAME = time.strftime("experiment_%Y_%m_%d-%H_%M_%S")
 LOGS_DIR = f"src/final_experiment/logs/{MODEL_NAME}/{TRIAL_NAME}"
 SHOULD_TRAIN_MODEL: bool = script_args.train
+RANDOM_SEARCH_TRIALS = 120
 TRAINING_EPOCHS = 12000
 
 train_dataset, validation_dataset = create_datasets()
@@ -44,7 +45,7 @@ tensorboard_cb = keras.callbacks.TensorBoard(
 early_stopping_cb = keras.callbacks.EarlyStopping(patience=20, min_delta=0.0001)
 
 
-# RANDOM SEARCH ----------------------------------------------------------------------------
+# SETUP RANDOM SEARCH ----------------------------------------------------------------------------
 def create_model() -> DeformationTrackerModel:
     model = DeformationTrackerModel(log_dir=LOGS_DIR)
     model.setTeacherForcing(True)
@@ -66,11 +67,12 @@ def build_model(hp):
 
     return model
 
+# RUN RANDOM SEARCH ----------------------------------------------------------------------
 
 tuner = keras_tuner.RandomSearch(
     hypermodel=build_model,
     objective="val_loss",
-    max_trials=120,
+    max_trials=RANDOM_SEARCH_TRIALS,
     executions_per_trial=1,
     overwrite=True,
     directory="src/final_experiment/saved_models/random_search_with_teacher",
@@ -98,7 +100,7 @@ save_best_model(
 )
 
 # Get Ratings for analysis graph ----------
-models = tuner.get_best_models(num_models=120)
+models = tuner.get_best_models(num_models=RANDOM_SEARCH_TRIALS)
 ratings = []
 for i,m in enumerate(models):
    ratings.append({'rating': i, **m.get_compile_config()['optimizer']['config']})

@@ -5,6 +5,7 @@
 import os
 import numpy as np
 import sys
+import time
 sys.path.append('./src')
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # to supress tf warnings
@@ -24,9 +25,11 @@ script_args = get_script_args()
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
 
-MODEL_NAME: str = "params_without_teacher"
+MODEL_NAME: str = "random_search_without_teacher"
 SAVED_MODEL_DIR: str = f"src/final_experiment/saved_models/best_{MODEL_NAME}"
 CHECKPOINT_MODEL_DIR: str = f"{SAVED_MODEL_DIR}/checkpoint/"
+TRIAL_NAME = time.strftime("experiment_%Y_%m_%d-%H_%M_%S")
+LOGS_DIR = f"src/final_experiment/logs/{MODEL_NAME}/{TRIAL_NAME}"
 
 # Model trained with teacher forcing
 PREV_MODEL_DIR: str = "src/final_experiment/saved_models/best_best_params_with_teacher_BEST"
@@ -36,26 +39,14 @@ TRAINING_EPOCHS = 500
 train_dataset, validation_dataset = create_datasets()
 
 # SETUP TENSORBOARD LOGS -------------------------------------------------------
-log_name = util_logs.get_log_filename(MODEL_NAME)
 tensorboard_cb = keras.callbacks.TensorBoard(
-    log_dir=log_name, histogram_freq=100, write_graph=True
-)
-
-
-# EARLY STOPPING
-early_stopping_cb = keras.callbacks.EarlyStopping(patience=20, min_delta=0.0001)
-
-# SAVE BEST CALLBACK
-checkpoint_cb = keras.callbacks.ModelCheckpoint(
-    filepath=CHECKPOINT_MODEL_DIR,
-    save_weights_only=True,
-    monitor="val_loss",
-    mode="min",
-    save_best_only=True,
+    log_dir=LOGS_DIR,
+    histogram_freq=100,
+    write_graph=True
 )
 
 # CREATE MODEL
-model = DeformationTrackerModel(log_dir=log_name)
+model = DeformationTrackerModel(log_dir=LOGS_DIR)
 
 # print(model.summary())
 
@@ -83,7 +74,7 @@ history = model.fit(
         validation_dataset['Y'],
     ),
     epochs=TRAINING_EPOCHS,
-    callbacks=[tensorboard_cb, checkpoint_cb] #, PlotWeightsCallback(plot_freq=50)],
+    callbacks=[tensorboard_cb] #, PlotWeightsCallback(plot_freq=50)],
 )
 
 save_best_model(
@@ -92,4 +83,3 @@ save_best_model(
     [validation_dataset['X_control_points'], validation_dataset['X_finger']],
     validation_dataset['Y']
 )
-

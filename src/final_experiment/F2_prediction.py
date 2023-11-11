@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # to supress tf warnings
 import time
 import tensorflow as tf
+tf.get_logger().setLevel('ERROR')
 from tensorflow import keras
 from concave_hull import concave_hull_indexes
 
@@ -89,7 +90,7 @@ if __name__ == "__main__":
     print("Using stored model.")
 
     # EVALUACION --------------------------------------------------------------------
-    # EVALUACION CON FORZAMIENTO
+    print("EVALUACION CON FORZAMIENTO")
     model.setTeacherForcing(True)
     train_loss = model.evaluate(
         [train_dataset['X_control_points'], train_dataset['X_finger']],
@@ -103,21 +104,21 @@ if __name__ == "__main__":
     print(f"Stored model loss on validation set: {validation_loss}")
 
 
-    # # EVALUACION SIN FORZAMIENTO
-    # model.setTeacherForcing(False)
-    # train_loss = model.evaluate(
-    #     [train_dataset['X_control_points'][:,:1,:], train_dataset['X_finger']],
-    #     train_dataset['Y']
-    # )
-    # print(f"Stored model loss on training set: {train_loss}")
-    # validation_loss = model.evaluate(
-    #     [validation_dataset['X_control_points'][:,:1,:], validation_dataset['X_finger']],
-    #     validation_dataset['Y']
-    # )
-    # print(f"Stored model loss on validation set: {validation_loss}")
+    print("EVALUACION SIN FORZAMIENTO:")
+    model.setTeacherForcing(False)
+    train_loss = model.evaluate(
+        [train_dataset['X_control_points'][:,:1,:], train_dataset['X_finger']],
+        train_dataset['Y']
+    )
+    print(f"Stored model loss on training set: {train_loss}")
+    validation_loss = model.evaluate(
+        [validation_dataset['X_control_points'][:,:1,:], validation_dataset['X_finger']],
+        validation_dataset['Y']
+    )
+    print(f"Stored model loss on validation set: {validation_loss}")
 
 
-
+    exit()
     # DATASET PLOT -----------------------------------------------------------------
     #LAST BEST
     # best_params_with_teacher/experiment_2023_10_30-21_26_05

@@ -4,7 +4,7 @@ logs/
 scripts/results
 src/final_experiment/saved_models/
 tmp/
-
+.vscode
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

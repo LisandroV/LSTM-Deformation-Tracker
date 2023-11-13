@@ -1,5 +1,5 @@
 """
-Plot the min, mix and average of all the random search experiments
+Plot the min, mix and average of all the random search experiments with teacher forcing
 """
 import numpy as np
 from tensorboard.backend.event_processing import event_accumulator as ea
@@ -57,12 +57,12 @@ def plot_xy(x,y):
     plt.yscale("log")
     plt.show()
 
-def format_int(num):
+def format_int(num, num_digits = 3):
     """
         turns to format 7 -> 007
     """
     digits =len(str(num))
-    return '0'*(3 - digits) + str(num)
+    return '0'*(num_digits - digits) + str(num)
 
 
 def get_log_summary(path):
@@ -78,6 +78,30 @@ def get_log_summary(path):
         y = get_smooth_y(path.format(format_int(i)))
         all_ys.append(y)
         print(f"Processed experiment #{i}")
+
+    summary['all_ys'] = all_ys
+    summary['y_mean'] = np.stack(all_ys).mean(axis=0)
+    summary['y_std'] = np.stack(all_ys).std(axis=0)
+    summary['y_min'] = np.stack(all_ys).min(axis=0)
+
+    return summary
+
+def get_distributed_log_summary(path, epochs, smooth_ratio):
+    """
+        Returns all the Y values from a given tensorboard log path, when the experiment was distributed in many directories.
+        * y_mean
+        * y_std
+        * y_min
+    """
+    summary = {}
+    all_ys = []
+    for dir_num in range(1,5):
+        for i in range(30):
+            y = get_smooth_y(path.format(dir_num,format_int(i,2)), epochs, smooth_ratio)
+            all_ys.append(y)
+            print(f"Processed distributed dir: #{dir_num}, experiment #{i}, len: {y[15000]}, all_index: {len(all_ys)}")
+
+    all_ys[114] = all_ys[115] # faulty data on experiment #114
 
     summary['all_ys'] = all_ys
     summary['y_mean'] = np.stack(all_ys).mean(axis=0)

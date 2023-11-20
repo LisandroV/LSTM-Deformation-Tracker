@@ -29,7 +29,7 @@ x = np.array([r['epsilon'] for r in ratings])
 y = np.array([r['learning_rate'] for r in ratings])
 
 color_rating = np.array([1-(30-r['rating'])/30 for r in ratings])
-area = np.array([ 300 if ratings[i]['rating'] < 2 else 15 for i in range(120)])
+area = np.array([ 200 if ratings[i]['rating'] < 2 else 15 for i in range(120)])
 
 
 ax.scatter(x, y,c=color_rating, cmap='cool', s=area)
@@ -49,7 +49,7 @@ ax = fig.add_subplot(111)
 x = np.array([r['beta_1'] for r in ratings])
 y = np.array([r['learning_rate'] for r in ratings])
 
-color_rating = np.array([1-(120-r['rating'])/120 for r in ratings])
+color_rating = np.array([1-(30-r['rating'])/30 for r in ratings])
 ax.scatter(x, y,c=color_rating, cmap='cool', s=area)
 
 ax.set_xlabel('beta_1')

@@ -1,5 +1,6 @@
 """
     The only purpose of this file is to see the performance of the trained models.
+    Plots the 3d graph.
 """
 
 import os

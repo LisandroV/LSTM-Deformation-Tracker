@@ -1,5 +1,7 @@
 """
     Random search without teacher forcing.
+    This file is to get the best model on training set,
+    this means the model with the lowest error on the training set.
 """
 
 import os
@@ -25,7 +27,7 @@ script_args = get_script_args()
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
 
-MODEL_NAME: str = "random_search_without_teacher"
+MODEL_NAME: str = "best_params_without_teacher"
 SAVED_MODEL_DIR: str = f"src/final_experiment/saved_models/best_{MODEL_NAME}"
 CHECKPOINT_MODEL_DIR: str = f"{SAVED_MODEL_DIR}/checkpoint/"
 TRIAL_NAME = time.strftime("experiment_%Y_%m_%d-%H_%M_%S")
@@ -34,7 +36,7 @@ LOGS_DIR = f"src/final_experiment/logs/{MODEL_NAME}/{TRIAL_NAME}"
 # Model trained with teacher forcing
 PREV_MODEL_DIR: str = "src/final_experiment/saved_models/best_best_params_with_teacher_BEST"
 PREV_CHECKPOINT_MODEL_DIR: str = f"{PREV_MODEL_DIR}/checkpoint/"
-TRAINING_EPOCHS = 500
+TRAINING_EPOCHS = 4000
 
 train_dataset, validation_dataset = create_datasets()
 
@@ -45,12 +47,28 @@ tensorboard_cb = keras.callbacks.TensorBoard(
     write_graph=True
 )
 
+# SAVE BEST CALLBACK ON TRAINING
+checkpoint_cb = keras.callbacks.ModelCheckpoint(
+    filepath=CHECKPOINT_MODEL_DIR,
+    save_weights_only=True,
+    monitor="loss",
+    mode="min",
+    save_best_only=True,
+)
+
 # CREATE MODEL
 model = DeformationTrackerModel(log_dir=LOGS_DIR)
 
 # print(model.summary())
 
-model.compile(loss="mse", optimizer="adam")
+model.compile(
+    optimizer=keras.optimizers.legacy.Adam(
+        learning_rate=0.001078203282079985,
+        beta_1=0.9136968841686723,
+        epsilon=8.652341013580072e-06
+    ),
+    loss="mse",
+)
 model.setTeacherForcing(False)
 
 
@@ -74,7 +92,7 @@ history = model.fit(
         validation_dataset['Y'],
     ),
     epochs=TRAINING_EPOCHS,
-    callbacks=[tensorboard_cb] #, PlotWeightsCallback(plot_freq=50)],
+    callbacks=[tensorboard_cb, checkpoint_cb] #, PlotWeightsCallback(plot_freq=50)],
 )
 
 save_best_model(

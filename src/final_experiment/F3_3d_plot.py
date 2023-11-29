@@ -96,7 +96,7 @@ if __name__ == "__main__":
         plot_cb=finger_position_plot(finger_data),
     )
 
-    # MULTIPLE PREDICTION VALIDATION
+    # MULTIPLE PREDICTION TRAINING SET
     finger_data = train_dataset['X_finger'][1,:,:2]
 
     y_pred = model.predict([train_dataset['X_control_points'][:47,:1,:], train_dataset['X_finger'][:47,:,:]])

@@ -53,3 +53,9 @@ GNGN guideline:
  - https://github.com/itdxer/neupy/blob/master/notebooks/growing-neural-gas/Growing%20Neural%20Gas%20animated.ipynb
  - https://github.com/itdxer/neupy/blob/master/neupy/algorithms/competitive/growing_neural_gas.py
  - https://github.com/ansrivas/GNG
+
+
+
+ # To generate gif
+ brew install ImageMagick
+ convert $(ls *.jpg | sort -V) out.gif

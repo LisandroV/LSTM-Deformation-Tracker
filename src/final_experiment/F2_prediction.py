@@ -29,6 +29,18 @@ STORED_MODEL_DIR: str = "src/final_experiment/saved_models/best_best_params_with
 #STORED_MODEL_DIR: str = "src/final_experiment/saved_models/best_random_search_with_teacher/" #5.74
 CHECKPOINT_MODEL_DIR: str = f"{STORED_MODEL_DIR}/checkpoint/"
 
+def save_prediction_images(prediction, finger_positions):
+    poligon_indexes = list(concave_hull_indexes(prediction[:,0,:], length_threshold=0.05,))
+    poligon_indexes.append(poligon_indexes[0])
+    trial_name = time.strftime("%Y_%m_%d-%H_%M_%S")
+    for i in range(100):
+        save_scatter_plot(
+            prediction[:,i,:].take(poligon_indexes,axis=0),
+            trial_name,
+            finger_position = finger_positions[i,:],
+            name=i+1
+        )
+
 def save_scatter_plot(control_points, trial_name, name='X', finger_position=None):
     """Plots the trajectories of the control points through time."""
     title = f"Prediction #{str(name)}"
@@ -54,18 +66,6 @@ def save_scatter_plot(control_points, trial_name, name='X', finger_position=None
 
     plt.savefig(f"./src/final_experiment/tmp/2_prediction/{trial_name}/{name}.png")
     plt.close(fig)
-
-def save_prediction_images(prediction, finger_positions):
-    poligon_indexes = list(concave_hull_indexes(prediction[:,0,:], length_threshold=0.05,))
-    poligon_indexes.append(poligon_indexes[0])
-    trial_name = time.strftime("%Y_%m_%d-%H_%M_%S")
-    for i in range(100):
-        save_scatter_plot(
-            prediction[:,i,:].take(poligon_indexes,axis=0),
-            trial_name,
-            finger_position = finger_positions[i,:],
-            name=i+1
-        )
 
 if __name__ == "__main__":
     train_dataset, validation_dataset = create_datasets()

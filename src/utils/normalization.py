@@ -46,6 +46,10 @@ def normalize_polygons(polygons):
     means = get_polygons_centers(transformed_polygons)
     scale = get_scale(transformed_polygons)
 
+    #print("NORMALIZATION")
+    #print(means[0])
+    #print(scale)
+
     for polygon in transformed_polygons:
         polygon[..., :2] -= means[0]
         polygon[..., :2] /= scale

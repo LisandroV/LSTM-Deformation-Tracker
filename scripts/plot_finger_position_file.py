@@ -10,7 +10,7 @@ sys.path.append("./")
 from src.read_data.finger_position_reader import read_finger_positions_file
 
 
-DATA_DIR: str = "data/sponge_centre"
+DATA_DIR: str = "data/sponge_shortside"
 
 finger_positions_file = os.path.join(DATA_DIR, "finger_position.txt")
 video_file = os.path.join(DATA_DIR, "video.mp4")

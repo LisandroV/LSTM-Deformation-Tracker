@@ -21,7 +21,7 @@ from concave_hull import concave_hull_indexes
 
 
 from utils.script_arguments import get_script_args
-from final_experiment.dataset import create_datasets
+from final_experiment.dataset import create_datasets, create_test_dataset
 import plots.dataset_plotter as plotter
 from subclassing_models import DeformationTrackerBiFlowModel as DeformationTrackerModel
 
@@ -98,20 +98,63 @@ if __name__ == "__main__":
 
 
     # PREDICTION VALIDATION SET -------------------------------------------------------------------
-    y_pred = model.predict([validation_dataset['X_control_points'][:47,:1,:], validation_dataset['X_finger'][:47,:,:]])
+    # y_pred = model.predict([validation_dataset['X_control_points'][:47,:1,:], validation_dataset['X_finger'][:47,:,:]])
+    # for frame_number in range(100):
+    #     scale = 200
+    #     polygon_center = [508.94235277, 506.56720458] # normalization: means[0]
+    #     scale = 202.29362620517776 # normalization: scale
+
+    #     finger_data = validation_dataset['X_finger'][1,:,:2]
+
+    #     concave_hull = list(concave_hull_indexes(y_pred[:,0,:], length_threshold=0.05,))
+    #     concave_hull.append(concave_hull[0])
+
+    #     frame_points = y_pred[:,frame_number,:].take(concave_hull,axis=0)
+
+    #     img = mpimg.imread(f'data/sponge_longside/images/frame{frame_number}.jpg')
+    #     plt.suptitle(f"Predicción {frame_number + 1}")
+    #     plt.imshow(img)
+    #     plt.scatter( # finger position
+    #         finger_data[frame_number,0]*scale + polygon_center[0],
+    #         finger_data[frame_number,1]*scale + polygon_center[1],
+    #         color='lime', s=100
+    #     )
+    #     plt.scatter( # control points
+    #         frame_points[:,0]*scale + polygon_center[0],
+    #         frame_points[:,1]*scale + polygon_center[1],
+    #         color='cyan', s=30
+    #     )
+    #     # link points with line
+    #     plt.plot(
+    #         frame_points[:,0]*scale + polygon_center[0],
+    #         frame_points[:,1]*scale + polygon_center[1],
+    #         color='cyan'
+    #     )
+
+    #     plt.xlim([250, 750])
+    #     plt.ylim([300, 650])
+    #     plt.gca().invert_yaxis()
+    #     #plt.show()
+    #     plt.savefig(f"./src/final_experiment/tmp/prediction_gif/best_on_validation_set/sponge_longside/images/{frame_number}.png")
+    #     plt.clf()
+
+
+    # PREDICTION TEST SET -------------------------------------------------------------------
+    test_dataset = create_test_dataset()
+    y_pred = model.predict([test_dataset['X_control_points'][:47,:1,:], test_dataset['X_finger'][:47,:,:]])
     for frame_number in range(100):
         scale = 200
-        polygon_center = [508.94235277, 506.56720458] # normalization: means[0]
-        scale = 202.29362620517776 # normalization: scale
+        polygon_center = [609.09286834, 427.11354844] # normalization: means[0]
+        scale = 199.36526475896835 # normalization: scale
 
-        finger_data = validation_dataset['X_finger'][1,:,:2]
+        finger_data = test_dataset['X_finger'][1,:,:2]
 
         concave_hull = list(concave_hull_indexes(y_pred[:,0,:], length_threshold=0.05,))
         concave_hull.append(concave_hull[0])
 
         frame_points = y_pred[:,frame_number,:].take(concave_hull,axis=0)
 
-        img = mpimg.imread(f'data/sponge_longside/images/frame{frame_number}.jpg')
+        img = mpimg.imread(f'data/sponge_shortside/images/frame{frame_number}.jpg')
         plt.suptitle(f"Predicción {frame_number + 1}")
         plt.imshow(img)
         plt.scatter( # finger position
@@ -131,9 +174,9 @@ if __name__ == "__main__":
             color='cyan'
         )
 
-        plt.xlim([250, 750])
-        plt.ylim([300, 650])
+        plt.xlim([370, 870])
+        plt.ylim([120, 670])
         plt.gca().invert_yaxis()
         #plt.show()
-        plt.savefig(f"./src/final_experiment/tmp/prediction_gif/best_on_validation_set/sponge_longside/images/{frame_number}.png")
+        plt.savefig(f"./src/final_experiment/tmp/prediction_gif/best_on_validation_set/sponge_shortside/images/{frame_number}.png")
         plt.clf()

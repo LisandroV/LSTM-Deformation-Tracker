@@ -16,6 +16,7 @@ import utils.normalization as normalization
 
 TRAIN_DATA_DIR: str = "data/sponge_centre"
 VALIDATION_DATA_DIR: str = "data/sponge_longside"
+TEST_DATA_DIR: str = "data/sponge_shortside"
 
 def create_datasets():
     """
@@ -125,3 +126,45 @@ def create_datasets():
     validation_dataset['finger_position'] = norm_valid_finger_positions
 
     return train_dataset, validation_dataset
+
+def create_test_dataset():
+    """
+        Returns training and validation datasets
+    """
+    # READ FORCE FILE --------------------------------------------------------------
+    test_finger_force_file: str = os.path.join(TEST_DATA_DIR, "finger_force.txt")
+    test_forces: np.ndarray = read_finger_forces_file(test_finger_force_file)
+
+    # READ FINGER POSITION FILE ----------------------------------------------------
+    test_finger_positions_file: str = os.path.join(TEST_DATA_DIR, "finger_position.txt")
+    test_finger_positions: np.ndarray = read_finger_positions_file(
+        test_finger_positions_file
+    )
+
+    # READ CONTROL POINTS ----------------------------------------------------------
+    test_cp_file: str = os.path.join(TEST_DATA_DIR, "fixed_control_points.npy")
+    test_polygons = np.flip(np.load(test_cp_file),axis=0)
+
+
+    # NORMALIZATION ----------------------------------------------------------------
+    norm_test_polygons = normalization.normalize_polygons(test_polygons)
+    norm_test_finger_positions = normalization.normalize_finger_position(
+        test_polygons, test_finger_positions
+    )
+    norm_test_forces = normalization.normalize_force(test_forces)
+
+
+    # DATA AUGMENTATION ------------------------------------------------------------
+
+
+    test_dataset = {}
+    (
+        test_dataset['X_control_points'],
+        test_dataset['X_finger'],
+        test_dataset['Y']
+    ) = create_calculated_values_dataset(
+        norm_test_polygons, norm_test_finger_positions, norm_test_forces
+    )
+    test_dataset['finger_position'] = norm_test_finger_positions
+
+    return test_dataset

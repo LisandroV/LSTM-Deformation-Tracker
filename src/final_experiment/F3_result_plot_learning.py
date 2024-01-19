@@ -44,7 +44,9 @@ if __name__ == "__main__":
     ax.plot(x, validation_best_y[:plot_limit], lw=2, label='Mejor resultado en conjunto de validación', color='magenta')
     ax.fill_between(x, validation_summary['y_mean'][:plot_limit]+validation_summary['y_std'][:plot_limit], validation_summary['y_min'][:plot_limit], facecolor='orange', alpha=0.4)
 
-    ax.annotate('mínimo', xy=(50, 0.005057165), xytext=(700, 0.002), va='top', ha='left', arrowprops=dict(facecolor='black', shrink=0.05))
+    # min validation arrow
+    ax.annotate('mínimo en\nvalidación', xy=(30, 0.004957165), xytext=(800, 0.003), va='top', ha='left', arrowprops=dict(facecolor='black', shrink=0.05))
+
 
     plt.xlabel("Épocas")
     plt.ylabel("Error (MSE)")

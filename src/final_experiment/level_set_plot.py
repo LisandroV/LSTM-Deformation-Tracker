@@ -1,6 +1,4 @@
-"""
-    The only purpose of this file is to see the performance of the trained models.
-"""
+"""This file plots the training dataset as a level set."""
 
 import os
 import numpy as np
@@ -10,6 +8,8 @@ import matplotlib
 
 matplotlib.use("QtAgg")
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+import matplotlib.cm as cm
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # to supress tf warnings
 import time
@@ -55,17 +55,53 @@ def save_scatter_plot(control_points, trial_name, name='X', finger_position=None
     plt.savefig(f"./src/final_experiment/tmp/F4_prediction_best_trining_set/{trial_name}/{name}.png")
     plt.close(fig)
 
+#prediction shape: (47, 100, 2)
+#finger_positions: (100,2)
 def save_prediction_images(prediction, finger_positions):
     poligon_indexes = list(concave_hull_indexes(prediction[:,0,:], length_threshold=0.05,))
     poligon_indexes.append(poligon_indexes[0])
     trial_name = time.strftime("%Y_%m_%d-%H_%M_%S")
-    for i in range(100):
-        save_scatter_plot(
-            prediction[:,i,:].take(poligon_indexes,axis=0),
-            trial_name,
-            finger_position = finger_positions[i,:],
-            name=i+1
-        )
+    #for i in range(100):
+        #import ipdb;ipdb.set_trace();
+        # save_scatter_plot(
+        #     prediction[:,i,:].take(poligon_indexes,axis=0),#shape: (48,2)
+        #     trial_name,
+        #     finger_position = finger_positions[i,:],
+        #     name=i+1
+        # )
+
+    title = "Level Set"
+    fig = plt.figure(title)
+    fig.suptitle(title)
+    ax = fig.add_subplot(111, projection="3d")
+
+    NCURVES = 100
+    values = range(NCURVES)
+    jet = plt.get_cmap("nipy_spectral")
+    cNorm = colors.Normalize(vmin=0, vmax=values[-1])
+    scalarMap = cm.ScalarMappable(norm=cNorm, cmap=jet)
+
+    # plots every control point history separately
+    for i in values:
+        try:
+            colorVal = scalarMap.to_rgba(values[i])
+            polygon = prediction[:,i,:].take(poligon_indexes,axis=0)#shape: (48,2)
+            t = np.array([i]*48)
+            #import ipdb;ipdb.set_trace();
+            ax.plot(t, polygon[:, 0], polygon[:, 1]*-1, color=colorVal, alpha=0.5)
+        except:
+            import ipdb;ipdb.set_trace();
+
+    ax.set_xlabel("tiempo")
+    ax.set_ylabel("x")
+    ax.set_zlabel("y")
+
+    # Plot finger
+    #ax.scatter(
+    #    range(100), finger_positions[:, 0], finger_positions[:, 1]*-1, s=10
+    #)
+    plt.show()
+
 
 if __name__ == "__main__":
     train_dataset, validation_dataset = create_datasets()
@@ -122,4 +158,4 @@ if __name__ == "__main__":
     finger_data = train_dataset['X_finger'][1,:,:2]
     y_pred = model.predict([train_dataset['X_control_points'][:47,:1,:], train_dataset['X_finger'][:47,:,:]])
 
-    #save_prediction_images(y_pred, finger_data)
+    save_prediction_images(y_pred, finger_data)

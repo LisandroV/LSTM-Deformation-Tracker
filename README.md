@@ -1,13 +1,61 @@
 # Deformation-Tracker
-In this repo I'll explore diverse neural network architectures to predict the deformation of objects
+This repo contains the research journal for a model that predicts the deformation of objects.
 
-Explanation of data:
-There are three types of files.
-1. Force file.This file has the following content:
+The results of the research were successful, with only four videos of the deformation of an object,
+the model is able to make close predictions to the real deformation.
 
-To fix the code format according to the PEP8 standard:
+# Summary:
+A robotic finger interacts with deformable objects, such as a dish-washing sponge, by pressing the object and recording the deformation process with a camera
+and a force sensor located on the robotic finger.
+Generating this kind of videos
+
+![](static/video.gif)
+
+## The Problem:
+We want to create a model that predicts the deformation of the object.
+The input of this model is the initial state of the object and the trajectory that the robotic finger will follow.
+With this input data the model will predict the deformation sequence of the object.
+
+# Best model arquitecture
+This is the architecture of the model with the best results. Internally it uses a LSTM network.
+
+![](static/model.png)
+
+All the files related to the best model can be found on the `src/final_experiment` directory.
+# Training
+The model uses a training technique called `teacher forcing`. This technique is very useful to train recurrent models.
+This technique splits the training process into two phases.
+
+### Phase 1: Training with teacher forcing
+On this phase we teach the model to predict one step of the deformation at a time.
+By doing this we don't overwhelm the model with the whole deformation sequence and it's easier for the model to learn.
+![](static/flujo_1.png)
+
+### Phase 2: Training without teacher forcing
+This time we train the model using the whole deformation sequence using the weights of the model trained on the previous phase to initialize the model. This way we ensure the model resumes the training.
+
+![](static/flujo_2.png)
+
+# Predictions
+In the end, with only four videos and 10 minutes of training, the model is able to make these kind of predictions:
+
+![](static/prediction.gif)
+
+The result would be better with more data, but it was difficult to access the force sensor.
+
+# Commands
+The final model was a result of many trial and error experiments that can be found on the `src` directory.
+
+
+To execute these experiments run:
+Run script with the default options
 ```
-black .
+python src/basic_recurrent.py
+```
+
+See all the possible options you can execute the script with
+```
+python src/basic_recurrent.py --help
 ```
 
 ## Visualize training loss with Tensorboard
@@ -18,15 +66,11 @@ Run this command to run tensorboard:
 tensorboard --logdir=./logs --port=6006
 ```
 
-## Run the scripts
-Run script with the default options
-```
-python src/basic_recurrent.py
-```
 
-See all the posible options you can execute the script with
+<!---
+To fix the code format according to the PEP8 standard:
 ```
-python src/basic_recurrent.py --help
+black .
 ```
 
 My resources:
@@ -59,3 +103,5 @@ GNGN guideline:
  # To generate gif
  brew install ImageMagick
  convert $(ls *.jpg | sort -V) out.gif
+
+-->
